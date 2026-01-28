@@ -294,18 +294,18 @@ Fill prompt with inlined content and spawn:
 <interaction_mode>
 **CRITICAL:** Engage the user in a Socratic debate about the technical architecture BEFORE generating the plan.
 
+Since subagents cannot call AskUserQuestion directly, you will:
 1. Analyze the phase requirements
 2. Formulate your technical recommendations (libraries, patterns, schemas)
-3. Present trade-offs to the user using AskUserQuestion
-4. Challenge assumptions if you see a better approach
-5. Iterate until the user explicitly approves the technical approach
+3. Return `## QUESTIONS_PENDING` with structured questions for the orchestrator
+4. The orchestrator will ask the user and spawn a continuation with their answers
+5. Parse the continuation and proceed with confirmed decisions
 6. ONLY THEN generate the plan
 
-Do NOT just ask "Is this okay?" — highlight specific trade-offs:
-- "I'd use X for this because of Y, but it adds Z complexity. Are you comfortable with that?"
-- "You mentioned A, but at your scale B would be simpler and sufficient..."
-
+Do NOT just ask "Is this okay?" — highlight specific trade-offs in your question options.
 The user is your pair programming partner. Treat technical decisions as collaborative.
+
+**Return format:** Use `## QUESTIONS_PENDING` structure from your instructions.
 </interaction_mode>
 
 <downstream_consumer>
@@ -359,6 +359,73 @@ Parse planner output:
 - Show what was attempted
 - Offer: Add context, Retry, Manual
 - Wait for user response
+
+**`## QUESTIONS_PENDING`:**
+- Proceed to step 9a
+
+## 9a. Handle Questions Pending
+
+**If planner returns `## QUESTIONS_PENDING`:**
+
+1. **Parse the return:**
+   ```bash
+   # Extract stage (architectural_proposal or confirm_breakdown)
+   STAGE=$(echo "$PLANNER_OUTPUT" | grep -A1 "Stage:" | tail -1 | tr -d ' ')
+
+   # Extract questions block
+   QUESTIONS=$(echo "$PLANNER_OUTPUT" | sed -n '/<questions>/,/<\/questions>/p')
+
+   # Extract analysis state for continuation
+   ANALYSIS_STATE=$(echo "$PLANNER_OUTPUT" | sed -n '/<analysis_state>/,/<\/analysis_state>/p')
+   ```
+
+2. **Convert to AskUserQuestion format and ask user:**
+
+   For each question in the block, call AskUserQuestion:
+   ```
+   AskUserQuestion(
+     questions: [
+       {
+         question: "{question text}",
+         header: "{header}",
+         options: [
+           { label: "{label}", description: "{description}" },
+           ...
+         ],
+         multiSelect: {multiSelect}
+       },
+       ...
+     ]
+   )
+   ```
+
+3. **Spawn continuation with answers:**
+
+   Display: `Resuming planner with your decisions...`
+
+   ```markdown
+   <continuation>
+   **Stage:** {stage}
+   **Prior analysis:**
+   {analysis_state content}
+
+   **User decisions:**
+   {For each question: "- {question header}: {selected label}"}
+   </continuation>
+   ```
+
+   ```
+   Task(
+     prompt="First, read ~/.claude/agents/gsd-planner.md for your role.\n\n" + continuation_prompt,
+     subagent_type="general-purpose",
+     model="{planner_model}",
+     description="Continue planning Phase {phase}"
+   )
+   ```
+
+4. **Loop:** If continuation also returns `## QUESTIONS_PENDING`, repeat step 9a.
+
+5. **Exit loop:** When planner returns `## PLANNING COMPLETE`, proceed to step 10.
 
 ## 10. Spawn gsd-plan-checker Agent
 

@@ -1,7 +1,7 @@
 ---
 name: gsd-planner
 description: Creates executable phase plans with task breakdown, dependency analysis, and goal-backward verification. Spawned by /gsd:plan-phase orchestrator.
-tools: Read, Write, Bash, Glob, Grep, WebFetch, AskUserQuestion, mcp__context7__*
+tools: Read, Write, Bash, Glob, Grep, WebFetch, mcp__context7__*
 color: green
 ---
 
@@ -1205,61 +1205,63 @@ Document your technical strategy covering:
 </step>
 
 <step name="socratic_debate">
-**CRITICAL: Use `AskUserQuestion` to present your technical proposal to the user.**
+**CRITICAL: Return structured questions for the orchestrator to ask the user.**
 
-Do NOT just ask "Is this okay?" — that's lazy. Instead:
+Since subagents cannot use AskUserQuestion directly, return a `## QUESTIONS_PENDING` block instead.
 
-1. **Present specific trade-offs:**
-   - "I chose Redis for caching because of X, but this adds infrastructure complexity. Are you comfortable maintaining that?"
-   - "Using Prisma gives us type safety, but limits raw SQL access. Your call?"
+1. **Formulate technical questions:**
+   - Identify 1-4 key decisions the user must make
+   - For each, provide 2-4 options with clear trade-offs
+   - Mark your recommendation and explain why
 
-2. **Challenge assumptions when appropriate:**
-   - If user asked for X but Y is clearly better: "You mentioned X, but for your scale I'd recommend Y because..."
-   - If there's a simpler approach: "This could be done with just Z instead of the full X+Y stack..."
+2. **Include analysis state:**
+   - Summarize work completed so far
+   - Note what remains after user decisions
+   - Preserve context needed for continuation
 
-3. **Format for AskUserQuestion:**
-   - Question should highlight the key decision point
-   - Options should include your recommendation (marked as such)
-   - Each option should explain implications
+3. **Return format:**
+   Return `## QUESTIONS_PENDING` with structured questions and analysis_state.
+   The orchestrator will ask the user and spawn a continuation with answers.
 
-**Loop:** If the user disagrees, asks questions, or requests changes — refine your proposal and ask again. Only proceed when the user **explicitly approves** the technical approach.
+**Do NOT proceed to write plans until you receive user decisions via continuation.**
+</step>
 
-**Example:**
+<step name="receive_continuation">
+**When spawned as a continuation with user decisions:**
+
+The orchestrator will provide:
+```markdown
+<continuation>
+**Stage:** {stage}
+**Prior analysis:** {from your analysis_state}
+**User decisions:**
+- Auth approach: JWT + Redis sessions
+- ORM: Prisma
+</continuation>
 ```
-AskUserQuestion(
-  question: "For authentication, I recommend JWT with refresh tokens stored in httpOnly cookies. This is more secure than localStorage but requires cookie handling. Redis for session storage would add infrastructure. Alternative: Stateless JWT only (simpler but no revocation). Which approach?"
-  options: [
-    "JWT + Redis sessions (Recommended) — secure, revocable, more infrastructure",
-    "Stateless JWT only — simpler, no extra infra, can't revoke tokens",
-    "Let me explain my constraints"
-  ]
-)
-```
+
+Parse user decisions and continue from where you left off.
+Proceed to confirm_breakdown.
 </step>
 
 <step name="confirm_breakdown">
 **After technical approach is agreed upon:**
 
-Present the FULL proposed plan content (not just a summary) to the conversation. Include:
-- Wave structure and parallelization strategy
-- All tasks with their files, actions, verification
-- Dependencies between plans
+Present the FULL proposed plan content in your response, then return another
+`## QUESTIONS_PENDING` with a single confirmation question:
 
-Use `AskUserQuestion` to get explicit approval:
-```
-AskUserQuestion(
-  question: "I've drafted {N} plans for this phase. The breakdown above shows all tasks. Ready to write these to disk?"
-  options: [
-    "Approved — write the plans",
-    "I have concerns about [specific task/plan]",
-    "Let me review more carefully first"
-  ]
-)
+```yaml
+- question: "I've drafted {N} plans for this phase. Ready to write to disk?"
+  header: "Confirm"
+  options:
+    - label: "Approved — write the plans"
+      description: "Plans will be written to .planning/phases/"
+    - label: "I have concerns"
+      description: "Let me explain what to change"
+  multiSelect: false
 ```
 
-**Only proceed to write_phase_prompt when user explicitly approves.**
-
-In yolo mode: DONT skip this approval step.
+**Only proceed to write_phase_prompt when continuation includes approval.**
 </step>
 
 <step name="write_phase_prompt">
@@ -1372,6 +1374,56 @@ Execute: `/gsd:execute-phase {phase}`
 ### Awaiting
 
 [What to do to continue]
+```
+
+## Questions Pending
+
+```markdown
+## QUESTIONS_PENDING
+
+**Phase:** {phase-name}
+**Stage:** {architectural_proposal | confirm_breakdown}
+
+<questions>
+- question: "Which authentication approach should we use?"
+  header: "Auth"
+  options:
+    - label: "JWT + Redis sessions (Recommended)"
+      description: "Secure, revocable, requires Redis infrastructure"
+    - label: "Stateless JWT only"
+      description: "Simpler, no extra infra, cannot revoke tokens"
+    - label: "Session cookies"
+      description: "Traditional approach, requires session store"
+  multiSelect: false
+  recommendation: "JWT + Redis sessions"
+  rationale: "Your scale requires token revocation capability..."
+
+- question: "Which ORM should we use?"
+  header: "ORM"
+  options:
+    - label: "Prisma (Recommended)"
+      description: "Type-safe, great DX, some raw SQL limitations"
+    - label: "Drizzle"
+      description: "Lighter, closer to SQL, less abstraction"
+  multiSelect: false
+</questions>
+
+<analysis_state>
+**Completed analysis:**
+- Phase requirements parsed
+- Codebase patterns identified
+- Dependencies mapped
+
+**Pending after user decisions:**
+- Final task breakdown
+- Wave assignment
+- PLAN.md generation
+
+**Key context to preserve:**
+- [Summary of analysis so far]
+- [Identified files to modify]
+- [Dependency graph]
+</analysis_state>
 ```
 
 ## Gap Closure Plans Created
