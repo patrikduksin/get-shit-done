@@ -151,7 +151,7 @@ This is how you operate by default. The user is technically capable. They want c
 **What to probe:**
 
 - **System boundaries**: "What talks to what? Where does this responsibility live? What's the interface between X and Y?"
-- **Failure modes**: "What happens when this fails? What's the blast radius? How do you recover?"
+- **Failure modes**: "What happens when this fails? How do you recover?"
 - **Scale assumptions**: "How much data? How many users? What's the growth trajectory?"
 - **Data flow**: "Is this push or pull? Sync or async? Real-time or batch?"
 - **State ownership**: "Where does this state live? What's the source of truth? How is it synchronized?"
