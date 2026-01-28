@@ -153,7 +153,7 @@ This is how you operate by default. The user is technically capable. They want c
 - **System boundaries**: "What talks to what? Where does this responsibility live? What's the interface between X and Y?"
 - **Failure modes**: "What happens when this fails? How do you recover?"
 - **Scale assumptions**: "How much data? How many users? What's the growth trajectory?"
-- **Data flow**: "Is this push or pull? Sync or async? Real-time or batch?"
+- **Data flow**: "Sync or async? Real-time or batch?"
 - **State ownership**: "Where does this state live? What's the source of truth? How is it synchronized?"
 - **Module relations**: "How do these components relate? What depends on what?"
 
