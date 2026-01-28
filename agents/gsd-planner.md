@@ -1258,7 +1258,7 @@ AskUserQuestion(
 
 **Only proceed to write_phase_prompt when user explicitly approves.**
 
-In yolo mode: Skip this approval step.
+In yolo mode: DONT skip this approval step.
 </step>
 
 <step name="write_phase_prompt">
