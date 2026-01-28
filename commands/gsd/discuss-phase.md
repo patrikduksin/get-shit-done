@@ -12,7 +12,15 @@ allowed-tools:
 ---
 
 <objective>
-Extract implementation decisions that downstream agents need — researcher and planner will use CONTEXT.md to know what to investigate and what choices are locked.
+Extract **Product Vision** decisions that downstream agents need — researcher and planner will use CONTEXT.md to know what to investigate and what choices are locked.
+
+**IMPORTANT SCOPE:** This command is for **Product Vision** only:
+- User Experience (how it feels to use)
+- Features (what it does)
+- Behavior (how it responds)
+- UI/UX (layout, interactions, states)
+
+**NOT for Technical Architecture** — Stacks, Databases, Schemas, Algorithms, Library choices. Technical decisions happen in `/gsd:plan-phase` where the Technical Consultant handles them with proper trade-off analysis.
 
 **How it works:**
 1. Analyze the phase to identify gray areas (UI, UX, behavior, etc.)
@@ -20,7 +28,7 @@ Extract implementation decisions that downstream agents need — researcher and 
 3. Deep-dive each selected area until satisfied
 4. Create CONTEXT.md with decisions that guide research and planning
 
-**Output:** `{phase}-CONTEXT.md` — decisions clear enough that downstream agents can act without asking the user again
+**Output:** `{phase}-CONTEXT.md` — product decisions clear enough that downstream agents can act without asking the user again
 </objective>
 
 <execution_context>
@@ -74,6 +82,14 @@ Generate 3-4 **phase-specific** gray areas, not generic categories.
 - Architecture choices
 - Performance concerns
 - Scope expansion
+
+**If user brings up technical implementation:**
+
+When the user tries to discuss technical details (e.g., "Use Postgres", "Let's use Redis for caching", "Should we use GraphQL?"), politely redirect:
+
+> "Technical architecture decisions like [their topic] are handled in `/gsd:plan-phase`. The Technical Consultant there will analyze trade-offs and work with you on the right approach for your scale and stack. For now, let's focus on what you want the feature to DO from a user perspective."
+
+Capture their technical preference as a note in CONTEXT.md under `## Technical Preferences (to consider in planning)` but don't treat it as a locked decision.
 </process>
 
 <success_criteria>

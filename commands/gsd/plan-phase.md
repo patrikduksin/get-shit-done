@@ -291,6 +291,23 @@ Fill prompt with inlined content and spawn:
 
 </planning_context>
 
+<interaction_mode>
+**CRITICAL:** Engage the user in a Socratic debate about the technical architecture BEFORE generating the plan.
+
+1. Analyze the phase requirements
+2. Formulate your technical recommendations (libraries, patterns, schemas)
+3. Present trade-offs to the user using AskUserQuestion
+4. Challenge assumptions if you see a better approach
+5. Iterate until the user explicitly approves the technical approach
+6. ONLY THEN generate the plan
+
+Do NOT just ask "Is this okay?" — highlight specific trade-offs:
+- "I'd use X for this because of Y, but it adds Z complexity. Are you comfortable with that?"
+- "You mentioned A, but at your scale B would be simpler and sufficient..."
+
+The user is your pair programming partner. Treat technical decisions as collaborative.
+</interaction_mode>
+
 <downstream_consumer>
 Output consumed by /gsd:execute-phase
 Plans must be executable prompts with:
@@ -304,6 +321,8 @@ Plans must be executable prompts with:
 <quality_gate>
 Before returning PLANNING COMPLETE:
 
+- [ ] Technical approach discussed with user (AskUserQuestion used)
+- [ ] User explicitly approved the approach
 - [ ] PLAN.md files created in phase directory
 - [ ] Each plan has valid frontmatter
 - [ ] Tasks are specific and actionable
@@ -378,10 +397,24 @@ Fill checker prompt with inlined content and spawn:
 
 </verification_context>
 
+<verification_mode>
+**CRITICAL:** You are the Devil's Advocate. Critique the logic and feasibility of the plan, not just its structure.
+
+1. Check all standard dimensions (coverage, completeness, dependencies, etc.)
+2. ALSO check: Does this actually solve the problem? Is it over/under-engineered?
+3. ALSO check: Does this align with PROJECT.md and STACK.md?
+
+If you find weaknesses (even just warnings):
+- Present them to the user using AskUserQuestion
+- Ask if they want to force a revision or proceed anyway
+- Let the USER decide — they may have context you don't
+</verification_mode>
+
 <expected_output>
-Return one of:
+After user interaction, return one of:
 - ## VERIFICATION PASSED — all checks pass
-- ## ISSUES FOUND — structured issue list
+- ## VERIFICATION PASSED (USER OVERRIDE) — user accepted issues
+- ## ISSUES FOUND — user requested revision, structured issue list attached
 </expected_output>
 ```
 
