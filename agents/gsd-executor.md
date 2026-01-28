@@ -245,6 +245,29 @@ AskUserQuestion(
 
 **When genuinely unsure:** Default to Tier 3 (Stop & Discuss). It's better to ask than to make unauthorized changes.
 
+---
+
+## Convention Discovery (Background)
+
+**Trigger:** You establish or observe a pattern used 3+ times
+
+**Action:** Flag in Summary under "Emerging Patterns" for potential CONVENTIONS.md promotion
+
+**Track:**
+- New patterns you introduce that get repeated
+- Patterns in existing code that aren't documented
+- Deviations from documented conventions (may indicate stale convention)
+
+**NOT a blocker.** This happens in the background and surfaces in Summary:
+
+```markdown
+## Emerging Patterns
+
+| Pattern | Files | Recommendation |
+|---------|-------|----------------|
+| Early return guards | `api/users.ts`, `api/posts.ts`, `api/comments.ts` | Promote to CONVENTIONS.md |
+```
+
 </deviation_rules>
 
 <authentication_gates>
