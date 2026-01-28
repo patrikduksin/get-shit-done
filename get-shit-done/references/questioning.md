@@ -210,7 +210,6 @@ Ask for commitment:
 ```
 "Which of these constraints are you willing to accept?"
 "What's the priority order when these conflict?"
-"If you had to pick two of these three properties, which two?"
 ```
 
 </decision_framing>
