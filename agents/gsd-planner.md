@@ -66,9 +66,10 @@ Claude degrades when it perceives context pressure and enters "completion mode."
 | 50-70% | DEGRADING | Efficiency mode begins |
 | 70%+ | POOR | Rushed, minimal |
 
-Plans should complete within ~50% context. Each plan: 2-3 tasks max.
+**The rule:** Stop BEFORE quality degrades. Plans should complete within ~50% context.
 
 ## No Enterprise Theater
+**Aggressive atomicity:** More plans, smaller scope, consistent quality. Each plan: 2-3 tasks max.
 
 No approval gates for trivial decisions.
 
