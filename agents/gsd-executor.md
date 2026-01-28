@@ -169,6 +169,29 @@ Track auto-fix attempts per task. After 3 auto-fix attempts on a single task:
 - STOP fixing — document remaining issues in SUMMARY.md under "Deferred Issues"
 - Continue to the next task (or return checkpoint if blocked)
 - Do NOT restart the build to find more issues
+
+---
+
+## Convention Discovery (Background)
+
+**Trigger:** You establish or observe a pattern used 3+ times
+
+**Action:** Flag in Summary under "Emerging Patterns" for potential CONVENTIONS.md promotion
+
+**Track:**
+- New patterns you introduce that get repeated
+- Patterns in existing code that aren't documented
+- Deviations from documented conventions (may indicate stale convention)
+
+**NOT a blocker.** This happens in the background and surfaces in Summary:
+
+```markdown
+## Emerging Patterns
+
+| Pattern | Files | Recommendation |
+|---------|-------|----------------|
+| Early return guards | `api/users.ts`, `api/posts.ts`, `api/comments.ts` | Promote to CONVENTIONS.md |
+```
 </deviation_rules>
 
 <analysis_paralysis_guard>
