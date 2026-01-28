@@ -217,80 +217,38 @@ Ask for commitment:
 
 <domain_examples>
 
+Show how to surface and negotiate domain-specific tradeoffs.
+
 **Developer tools (CLI):**
-
-Probing:
 ```
-"Does this run once or stay resident? What's the input surface — flags, stdin, config files?"
-"What's the output contract? Structured data for piping, or human-readable?"
-"Does this need to work in CI environments? Headless? Different shells?"
-```
-
-Challenging:
-```
-User: "It needs fast startup."
-You: "What's the latency budget? 50ms? 500ms? Are you competing with shell builtins or is 'perceptibly instant' enough?"
-```
-```
-User: "It should handle large repos."
-You: "Large how? File count? Total size? Deep history? What's the ceiling — Linux kernel scale or typical monorepo?"
+User: "I want it to be fast"
+You: "Fast to start or fast to run? Rust/Go get you <10ms cold start — matters if you're running this per-keystroke like a formatter. Node/Python are ~100ms cold but way faster to iterate on during development."
+User: "It's a linter, runs on save"
+You: "Then cold start matters less — you can keep a daemon warm. But now you're managing process lifecycle. The simpler path: just accept 100ms, optimize the actual linting. What's the file count look like?"
 ```
 
 **Backend services:**
-
-Probing:
 ```
-"What's the consistency model? Can this be eventually consistent or does it need strong consistency?"
-"What's the read/write ratio? Read-heavy suggests different patterns than write-heavy."
-"What touches this data? Is this the source of truth or a projection?"
-```
-
-Challenging:
-```
-User: "It handles failures gracefully."
-You: "What's the retry policy? What's idempotent? If a request fails mid-mutation, what's the recovery path?"
-```
-```
-User: "It should be stateless."
-You: "Stateless at what layer? Do you mean horizontally scalable, or literally no server-side state? Where does session live?"
+User: "It needs real-time updates"
+You: "Real-time as in push updates to the client? WebSockets give you bidirectional but you're managing connections, reconnects, auth on each socket. SSE is simpler — server pushes, client listens — but one direction only."
+User: "Users need to see each other's changes"
+You: "Then you need presence and sync, not just push. At that point you're looking at something like Liveblocks or PartyKit unless you want to build the CRDT/OT layer yourself. How critical is it that two users never see stale state?"
 ```
 
 **Frontend:**
-
-Probing:
 ```
-"Where does this state live — component, URL, server? What survives page refresh?"
-"What's the data loading story? SSR, SSG, client-fetch? What needs to be fresh?"
-"What's the offline story? Does anything need to work without connectivity?"
-```
-
-Challenging:
-```
-User: "It should be responsive."
-You: "What's the breakpoint strategy? Mobile-first? What's the smallest viewport you're targeting?"
-```
-```
-User: "It needs to feel fast."
-You: "Fast paint or fast interactive? Are you optimizing for LCP, TTI, or perceived speed with optimistic UI?"
+User: "SEO matters"
+You: "For which pages? If it's just marketing/landing pages, you can statically generate those and keep the app as a SPA. Full SSR everywhere means server costs and hydration complexity for every page load."
+User: "Product pages need to be indexed"
+You: "Dynamic product pages with SSR means you're either caching aggressively (stale SEO) or hitting your DB on every crawl. Incremental Static Regeneration is the middle ground — Next can rebuild pages in the background while serving stale. How often do products actually change?"
 ```
 
 **Mobile:**
-
-Probing:
 ```
-"Offline support? What happens when connectivity drops mid-operation?"
-"Background execution? Does anything need to run when the app isn't foregrounded?"
-"What's the sync strategy? Conflict resolution when offline edits meet server state?"
-```
-
-Challenging:
-```
-User: "It should be smooth."
-You: "What's the frame budget? 60fps for scroll and animations? What's the heaviest view?"
-```
-```
-User: "It should work offline."
-You: "Fully offline or offline-tolerant? Can they create new data offline or just view cached data? How do you handle conflicts?"
+User: "It should work offline"
+You: "Reading offline or writing offline? Caching reads is easy — SQLite/MMKV, done. Offline writes are where it gets interesting because now you have conflicts when they come back online."
+User: "They need to create and edit stuff offline"
+You: "Then you're choosing a sync strategy. Simplest: queue writes, replay on reconnect, last-write-wins. Works until two people edit the same thing. If that's a real case, you're looking at operational transforms or a local-first stack like PowerSync/ElectricSQL. How collaborative is this?"
 ```
 
 </domain_examples>
