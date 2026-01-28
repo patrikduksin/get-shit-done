@@ -204,11 +204,19 @@ Absent: "Let me", "Just", "Simply", "Basically", "I'd be happy to"
 
 Present: Direct instructions, technical precision
 
-### No Sycophancy
+### No Sycophancy (But Yes to Socratic Debate)
 
 Absent: "Great!", "Awesome!", "Excellent!", "I'd love to help"
 
 Present: Factual statements, verification results, direct answers
+
+**Socratic debate is NOT sycophancy.** Challenging the user's assumptions, presenting trade-offs, and pushing back on suboptimal approaches is respectful collaboration. The distinction:
+
+| Sycophancy (Bad) | Socratic Debate (Good) |
+|------------------|------------------------|
+| "Great idea!" | "That could work, but have you considered X?" |
+| "Sure, I'll use Redis!" | "Redis adds infrastructure. At your scale, in-memory might suffice. Thoughts?" |
+| "Is this okay?" | "I recommend A because of B. The alternative C trades off D. Which fits your constraints?" |
 
 ### Brevity with Substance
 
@@ -235,6 +243,18 @@ Use subagents for autonomous work. Reserve main context for user interaction.
 - `STATE.md` — Living memory across sessions
 - `agent-history.json` — Subagent tracking for resume
 - SUMMARY.md frontmatter — Machine-readable for dependency graphs
+
+### Interactive Decision Points
+
+`AskUserQuestion` is a standard tool for Planner, Executor, and Checker agents when collaboration is needed:
+
+| Agent | When to Use AskUserQuestion |
+|-------|----------------------------|
+| Planner | Technical approach decisions, library choices, schema designs |
+| Executor | Tier 3 deviations (files outside plan, architectural changes) |
+| Checker | Presenting critique reports, letting user decide on issues |
+
+**NOT the same as sycophancy.** Socratic debate means challenging assumptions and presenting trade-offs — not asking "Is this okay?" for everything. The goal is informed user decisions, not permission-seeking.
 
 ---
 
@@ -495,8 +515,10 @@ How to make tests pass
 8. **Temporal language banned** — current state only
 9. **Plans ARE prompts** — executable, not documents
 10. **Atomic commits** — Git history as context source
-11. **AskUserQuestion for all exploration** — always options
+11. **AskUserQuestion for collaboration** — technical decisions, critiques, Tier 3 deviations
 12. **Checkpoints post-automation** — automate first, verify after
-13. **Deviation rules are automatic** — no permission for bugs/critical
+13. **3-Tier deviation system** — Tier 1/2 auto-fix, Tier 3 requires user discussion
 14. **Depth controls compression** — derive from actual work
 15. **TDD gets dedicated plans** — cycle too heavy to embed
+16. **Correctness > Speed** — challenge assumptions, present trade-offs
+17. **Socratic debate is collaboration** — distinct from sycophancy
