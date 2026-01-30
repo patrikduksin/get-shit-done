@@ -527,10 +527,10 @@ Evaluate scope against context budget.
 **Metrics per plan:**
 ```bash
 # Count tasks
-grep -c "<task" "$PHASE_DIR"/${PHASE}-01-PLAN.md
+grep -c "<task" "$PHASE_DIR"/$PHASE-01-PLAN.md
 
 # Count files in files_modified
-grep "files_modified:" "$PHASE_DIR"/${PHASE}-01-PLAN.md
+grep "files_modified:" "$PHASE_DIR"/$PHASE-01-PLAN.md
 ```
 
 **Thresholds:**
