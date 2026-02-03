@@ -179,18 +179,21 @@ If you prefer not to use that flag, add this to your project's `.claude/settings
 
 ```
 /gsd:new-project
+/gsd:init-roadmap
 ```
 
-One command, one flow. The system:
+Two commands, fresh context between them:
 
-1. **Questions** — Asks until it understands your idea completely (goals, constraints, tech preferences, edge cases)
-2. **Research** — Spawns parallel agents to investigate the domain (optional but recommended)
-3. **Requirements** — Extracts what's v1, v2, and out of scope
-4. **Roadmap** — Creates phases mapped to requirements
+1. **`new-project`** — Deep questioning until it understands your idea completely (goals, constraints, tech preferences, edge cases). Creates `PROJECT.md`.
+
+2. **`init-roadmap`** — Config, research, requirements, roadmap. Uses `PROJECT.md`.
+   - **Research** — Spawns parallel agents to investigate the domain (optional but recommended)
+   - **Requirements** — Extracts what's v1, v2, and out of scope
+   - **Roadmap** — Creates phases mapped to requirements
 
 You approve the roadmap. Now you're ready to build.
 
-**Creates:** `PROJECT.md`, `REQUIREMENTS.md`, `ROADMAP.md`, `STATE.md`, `.planning/research/`
+**Creates:** `PROJECT.md`, `config.json`, `REQUIREMENTS.md`, `ROADMAP.md`, `STATE.md`, `.planning/research/`
 
 ---
 
@@ -416,15 +419,16 @@ You're never locked in. The system adapts.
 
 ### Core Workflow
 
-| Command | What it does |
-|---------|--------------|
-| `/gsd:new-project` | Full initialization: questions → research → requirements → roadmap |
-| `/gsd:discuss-phase [N]` | Capture implementation decisions before planning |
-| `/gsd:plan-phase [N]` | Research + plan + verify for a phase |
-| `/gsd:execute-phase <N>` | Execute all plans in parallel waves, verify when complete |
-| `/gsd:verify-work [N]` | Manual user acceptance testing ¹ |
-| `/gsd:audit-milestone` | Verify milestone achieved its definition of done |
-| `/gsd:complete-milestone` | Archive milestone, tag release |
+| Command                     | What it does                                                      |
+| --------------------------- | ----------------------------------------------------------------- |
+| `/gsd:new-project`          | Deep questioning → PROJECT.md                                     |
+| `/gsd:init-roadmap`         | Config → research → requirements → roadmap                        |
+| `/gsd:discuss-phase [N]`    | Capture implementation decisions before planning                  |
+| `/gsd:plan-phase [N]`       | Research + plan + verify for a phase                              |
+| `/gsd:execute-phase <N>`    | Execute all plans in parallel waves, verify when complete         |
+| `/gsd:verify-work [N]`      | Manual user acceptance testing ¹                                  |
+| `/gsd:audit-milestone`      | Verify milestone achieved its definition of done                  |
+| `/gsd:complete-milestone`   | Archive milestone, tag release                                    |
 | `/gsd:new-milestone [name]` | Start next version: questions → research → requirements → roadmap |
 
 ### Navigation

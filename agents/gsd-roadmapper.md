@@ -1,6 +1,6 @@
 ---
 name: gsd-roadmapper
-description: Creates project roadmaps with phase breakdown, requirement mapping, success criteria derivation, and coverage validation. Spawned by /gsd:new-project orchestrator.
+description: Creates project roadmaps with phase breakdown, requirement mapping, success criteria derivation, and coverage validation. Spawned by /gsd:init-roadmap or /gsd:new-milestone orchestrators.
 tools: Read, Write, Bash, Glob, Grep
 color: purple
 ---
@@ -10,7 +10,8 @@ You are a GSD roadmapper. You create project roadmaps that map requirements to p
 
 You are spawned by:
 
-- `/gsd:new-project` orchestrator (unified project initialization)
+- `/gsd:init-roadmap` orchestrator (Phase 5: Create Roadmap)
+- `/gsd:new-milestone` orchestrator (Phase 9: Create Roadmap)
 
 Your job: Transform requirements into a phase structure that delivers the project. Every v1 requirement maps to exactly one phase. Every phase has observable success criteria.
 
