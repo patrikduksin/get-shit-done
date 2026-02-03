@@ -598,10 +598,16 @@ BRANCHING_STRATEGY=$(cat .planning/config.json 2>/dev/null | grep -o '"branching
 PHASE_BRANCH_TEMPLATE=$(cat .planning/config.json 2>/dev/null | grep -o '"phase_branch_template"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*:.*"\([^"]*\)"/\1/' || echo "gsd/phase-{phase}-{slug}")
 
 # Extract prefix from template (before first variable)
-BRANCH_PREFIX=$(echo "$PHASE_BRANCH_TEMPLATE" | sed 's/{.*//')
+BRANCH_PREFIX=$(echo "$PHASE_BRANCH_TEMPLATE" | sed 's/{.*//' | tr -d '[:space:]')
 
-# Find all phase branches for this milestone
-PHASE_BRANCHES=$(git branch --list "${BRANCH_PREFIX}*" 2>/dev/null | sed 's/^\*//' | tr -d ' ')
+# Safety guard: empty prefix would match all branches
+if [ -z "$BRANCH_PREFIX" ]; then
+  echo "Warning: phase_branch_template has no static prefix (starts with variable). Cannot safely detect phase branches."
+  PHASE_BRANCHES=""
+else
+  # Find all phase branches for this milestone
+  PHASE_BRANCHES=$(git branch --list "${BRANCH_PREFIX}*" 2>/dev/null | sed 's/^\*//' | tr -d ' ')
+fi
 ```
 
 **For "milestone" strategy — find milestone branch:**
@@ -610,10 +616,16 @@ PHASE_BRANCHES=$(git branch --list "${BRANCH_PREFIX}*" 2>/dev/null | sed 's/^\*/
 MILESTONE_BRANCH_TEMPLATE=$(cat .planning/config.json 2>/dev/null | grep -o '"milestone_branch_template"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*:.*"\([^"]*\)"/\1/' || echo "gsd/{milestone}-{slug}")
 
 # Extract prefix from template
-BRANCH_PREFIX=$(echo "$MILESTONE_BRANCH_TEMPLATE" | sed 's/{.*//')
+BRANCH_PREFIX=$(echo "$MILESTONE_BRANCH_TEMPLATE" | sed 's/{.*//' | tr -d '[:space:]')
 
-# Find milestone branch
-MILESTONE_BRANCH=$(git branch --list "${BRANCH_PREFIX}*" 2>/dev/null | sed 's/^\*//' | tr -d ' ' | head -1)
+# Safety guard: empty prefix would match all branches
+if [ -z "$BRANCH_PREFIX" ]; then
+  echo "Warning: milestone_branch_template has no static prefix (starts with variable). Cannot safely detect milestone branch."
+  MILESTONE_BRANCH=""
+else
+  # Find milestone branch
+  MILESTONE_BRANCH=$(git branch --list "${BRANCH_PREFIX}*" 2>/dev/null | sed 's/^\*//' | tr -d ' ' | head -1)
+fi
 ```
 
 **If no branches found:** Skip to git_tag step.
