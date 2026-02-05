@@ -228,6 +228,19 @@ EOF
 )"
 ```
 
+## Phase 4.5: Register with Memory (Optional)
+
+If `gsd_memory_register` MCP tool is available, register this project for cross-project memory:
+
+```text
+gsd_memory_register({
+  path: process.cwd(),
+  name: "[project name from PROJECT.md]"
+})
+```
+
+If unavailable, skip silently.
+
 ## Phase 5: Done
 
 Present completion with next steps:
