@@ -744,8 +744,7 @@ Report: "Branches preserved for manual handling"
 Create git tag for milestone:
 
 ```bash
-git tag -a v[X.Y] -m "$(cat <<'EOF'
-v[X.Y] [Name]
+git tag -a v[X.Y] -m "v[X.Y] [Name]
 
 Delivered: [One sentence]
 
@@ -754,9 +753,7 @@ Key accomplishments:
 - [Item 2]
 - [Item 3]
 
-See .planning/MILESTONES.md for full details.
-EOF
-)"
+See .planning/MILESTONES.md for full details."
 ```
 
 Confirm: "Tagged: v[X.Y]"
