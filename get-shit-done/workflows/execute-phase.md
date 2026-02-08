@@ -365,6 +365,14 @@ Execute each wave in sequence. Autonomous plans within a wave run in parallel **
 
 4. **Handle failures:**
 
+   **Known Claude Code bug (`classifyHandoffIfNeeded`):**
+   If an agent reports failure containing `classifyHandoffIfNeeded is not defined`, treat this as a runtime reporting bug.
+   Re-run the same spot-checks from step 3:
+   - SUMMARY.md exists
+   - matching git commit(s) exist
+   - no `## Self-Check: FAILED`
+   If spot-checks pass, treat the plan as successful.
+
    If any agent in wave fails:
    - Report which plan failed and why
    - Ask user: "Continue with remaining waves?" or "Stop execution?"
@@ -650,6 +658,11 @@ No polling (Task blocks). No context bleed.
 </context_efficiency>
 
 <failure_handling>
+**classifyHandoffIfNeeded false failure:**
+- Agent reports "failed" with `classifyHandoffIfNeeded is not defined`
+- This is Claude Code runtime bug, not a GSD execution failure
+- Spot-check SUMMARY + commits; if checks pass, treat as success
+
 **Subagent fails mid-plan:**
 - SUMMARY.md won't exist
 - Orchestrator detects missing SUMMARY
