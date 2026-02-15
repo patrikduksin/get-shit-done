@@ -461,7 +461,31 @@ Extract completed milestone details and create archive file.
    ✅ ROADMAP.md deleted (fresh one for next milestone)
    ```
 
-**Note:** Phase directories (`.planning/phases/`) are NOT deleted. They accumulate across milestones as the raw execution history. Phase numbering continues (v1.0 phases 1-4, v1.1 phases 5-8, etc.).
+**Phase archival (optional):** Ask whether to archive completed phase directories for this milestone.
+
+Use AskUserQuestion:
+- header: "Archive Phases"
+- question: "Archive phase directories to milestones/v[X.Y]-phases/?"
+- options:
+  - "Yes — archive now"
+  - "Skip — keep in .planning/phases/"
+
+**If "Yes — archive now":**
+
+```bash
+mkdir -p .planning/milestones/v[X.Y]-phases
+for d in .planning/phases/*; do
+  [ -d "$d" ] && mv "$d" .planning/milestones/v[X.Y]-phases/
+done
+```
+
+Confirm:
+```
+✅ Phase directories archived to .planning/milestones/v[X.Y]-phases/
+```
+
+**If "Skip — keep in .planning/phases/":**
+Phase directories remain as raw execution history. Use `/gsd:cleanup` later to archive retroactively.
 
 </step>
 
