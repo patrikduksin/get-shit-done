@@ -598,13 +598,13 @@ User stays in control at each decision point.
 </step>
 
 <step name="update_roadmap">
-Update ROADMAP.md to reflect phase completion:
+Update ROADMAP.md to reflect phase completion using deterministic plan progress from disk:
 
 ```bash
-# Mark phase complete
-# Update completion date
-# Update status
+node ~/.claude/get-shit-done/bin/gsd-tools.js roadmap update-plan-progress "${PADDED_PHASE}"
 ```
+
+This counts PLAN vs SUMMARY files directly and updates the roadmap progress table row.
 
 **Check planning config:**
 
