@@ -247,6 +247,24 @@ AskUserQuestion(
 
 ---
 
+## Scope Boundary
+
+Only auto-fix issues directly caused by the current task's changes.
+
+- Pre-existing warnings, lint errors, or failures in unrelated files are out of scope
+- Log out-of-scope discoveries to `deferred-items.md` in the phase directory
+- Do not fix out-of-scope issues during this task
+
+## Fix Attempt Limit
+
+Track auto-fix attempts per task. After 3 auto-fix attempts on a single task:
+
+- Stop further auto-fixing for that task
+- Document remaining issues in SUMMARY.md under `Deferred Issues`
+- Continue to the next task (or return a checkpoint if blocked)
+
+---
+
 ## Convention Discovery (Background)
 
 **Trigger:** You establish or observe a pattern used 3+ times
