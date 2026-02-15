@@ -613,6 +613,8 @@ Check if branching was used and offer merge options.
 ```bash
 # Get branching strategy from config
 BRANCHING_STRATEGY=$(cat .planning/config.json 2>/dev/null | grep -o '"branching_strategy"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*:.*"\([^"]*\)"/\1/' || echo "none")
+# Respect planning-doc commit policy during branch merges
+COMMIT_DOCS=$(cat .planning/config.json 2>/dev/null | grep -o '"commit_docs"[[:space:]]*:[[:space:]]*[^,}]*' | grep -o 'true\\|false' || echo "true")
 ```
 
 **If strategy is "none":** Skip to git_tag step.
@@ -700,6 +702,9 @@ if [ "$BRANCHING_STRATEGY" = "phase" ]; then
   for branch in $PHASE_BRANCHES; do
     echo "Squash merging $branch..."
     git merge --squash "$branch"
+    if [ "$COMMIT_DOCS" = "false" ]; then
+      git reset HEAD .planning/ 2>/dev/null || true
+    fi
     git commit -m "feat: $branch for v[X.Y]"
   done
 fi
@@ -708,6 +713,9 @@ fi
 if [ "$BRANCHING_STRATEGY" = "milestone" ]; then
   echo "Squash merging $MILESTONE_BRANCH..."
   git merge --squash "$MILESTONE_BRANCH"
+  if [ "$COMMIT_DOCS" = "false" ]; then
+    git reset HEAD .planning/ 2>/dev/null || true
+  fi
   git commit -m "feat: $MILESTONE_BRANCH for v[X.Y]"
 fi
 
@@ -726,14 +734,22 @@ git checkout main
 if [ "$BRANCHING_STRATEGY" = "phase" ]; then
   for branch in $PHASE_BRANCHES; do
     echo "Merging $branch..."
-    git merge --no-ff "$branch" -m "Merge branch '$branch' for v[X.Y]"
+    git merge --no-ff --no-commit "$branch"
+    if [ "$COMMIT_DOCS" = "false" ]; then
+      git reset HEAD .planning/ 2>/dev/null || true
+    fi
+    git commit -m "Merge branch '$branch' for v[X.Y]"
   done
 fi
 
 # For milestone strategy - merge milestone branch
 if [ "$BRANCHING_STRATEGY" = "milestone" ]; then
   echo "Merging $MILESTONE_BRANCH..."
-  git merge --no-ff "$MILESTONE_BRANCH" -m "Merge branch '$MILESTONE_BRANCH' for v[X.Y]"
+  git merge --no-ff --no-commit "$MILESTONE_BRANCH"
+  if [ "$COMMIT_DOCS" = "false" ]; then
+    git reset HEAD .planning/ 2>/dev/null || true
+  fi
+  git commit -m "Merge branch '$MILESTONE_BRANCH' for v[X.Y]"
 fi
 
 git checkout "$CURRENT_BRANCH"
