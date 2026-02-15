@@ -28,7 +28,7 @@ Extract **Product Vision** decisions that downstream agents need — researcher 
 3. Deep-dive each selected area until satisfied
 4. Create CONTEXT.md with decisions that guide research and planning
 
-**Output:** `{phase}-CONTEXT.md` — product decisions clear enough that downstream agents can act without asking the user again
+**Output:** `{phase_num}-CONTEXT.md` — product decisions clear enough that downstream agents can act without asking the user again
 </objective>
 
 <execution_context>

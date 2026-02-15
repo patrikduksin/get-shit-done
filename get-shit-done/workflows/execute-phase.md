@@ -564,7 +564,7 @@ Present gaps and offer next command:
 ## ⚠ Phase {X}: {Name} — Gaps Found
 
 **Score:** {N}/{M} must-haves verified
-**Report:** {phase_dir}/{phase}-VERIFICATION.md
+**Report:** {phase_dir}/{phase_num}-VERIFICATION.md
 
 ### What's Missing
 
@@ -583,7 +583,7 @@ Present gaps and offer next command:
 ---
 
 **Also available:**
-- `cat {phase_dir}/{phase}-VERIFICATION.md` — see full report
+- `cat {phase_dir}/{phase_num}-VERIFICATION.md` — see full report
 - `/gsd:verify-work {X}` — manual testing before planning
 ```
 
