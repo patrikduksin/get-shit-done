@@ -634,7 +634,7 @@ Present next steps based on milestone status:
 
 **Phase {X+1}: {Name}** — {Goal}
 
-`/gsd:plan-phase {X+1}`
+`/gsd:discuss-phase {X+1}`
 
 <sub>`/clear` first for fresh context</sub>
 ```
