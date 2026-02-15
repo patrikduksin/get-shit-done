@@ -1299,6 +1299,8 @@ Present the FULL proposed plan content in your response, then return another
 <step name="write_phase_prompt">
 Use template structure for each PLAN.md.
 
+**ALWAYS use the Write tool to create files.** Never use heredoc-style Bash file creation.
+
 Write to `.planning/phases/XX-name/{phase}-{NN}-PLAN.md` (e.g., `01-02-PLAN.md` for Phase 1, Plan 2)
 
 Include frontmatter (phase, plan, type, wave, depends_on, files_modified, autonomous, must_haves).

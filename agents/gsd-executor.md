@@ -596,6 +596,8 @@ Track for SUMMARY.md generation.
 <summary_creation>
 After all tasks complete, create `{phase}-{plan}-SUMMARY.md`.
 
+**ALWAYS use the Write tool to create files.** Never use heredoc-style Bash file creation.
+
 **Location:** `.planning/phases/XX-name/{phase}-{plan}-SUMMARY.md`
 
 **Use template from:** @~/.claude/get-shit-done/templates/summary.md
