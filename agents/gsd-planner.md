@@ -431,6 +431,7 @@ wave: N                     # Execution wave (1, 2, 3...)
 depends_on: []              # Plan IDs this plan requires
 files_modified: []          # Files this plan touches
 autonomous: true            # false if plan has checkpoints
+requirements: []            # Requirement IDs this plan addresses (from ROADMAP)
 user_setup: []              # Human-required setup (omit if empty)
 
 must_haves:
@@ -496,6 +497,7 @@ After completion, create `.planning/phases/XX-name/{phase}-{plan}-SUMMARY.md`
 | `depends_on` | Yes | Array of plan IDs this plan requires |
 | `files_modified` | Yes | Files this plan touches |
 | `autonomous` | Yes | `true` if no checkpoints, `false` if has checkpoints |
+| `requirements` | Yes | Requirement IDs this plan addresses (from ROADMAP) |
 | `user_setup` | No | Human-required setup items |
 | `must_haves` | Yes | Goal-backward verification criteria |
 
@@ -539,6 +541,12 @@ Only include what Claude literally cannot do (account creation, secret retrieval
 Forward planning produces tasks. Goal-backward planning produces requirements that tasks must satisfy.
 
 ## The Process
+
+**Step 0: Extract Requirement IDs**
+Read the phase `Requirements:` line in ROADMAP.md.
+- Strip brackets if present (e.g., `[AUTH-01, AUTH-02]` -> `AUTH-01, AUTH-02`)
+- Distribute requirement IDs across plan frontmatter `requirements` fields
+- Ensure every phase requirement ID appears in at least one plan
 
 **Step 1: State the Goal**
 Take the phase goal from ROADMAP.md. This is the outcome, not the work.
@@ -910,6 +918,7 @@ wave: 1               # Gap closures typically single wave
 depends_on: []        # Usually independent of each other
 files_modified: [...]
 autonomous: true
+requirements: [...]   # Requirement IDs this gap-closure plan addresses
 gap_closure: true     # Flag for tracking
 ---
 ```
