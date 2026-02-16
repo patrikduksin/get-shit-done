@@ -63,6 +63,12 @@ ls .planning/phases/*/SUMMARY.md 2>/dev/null | wc -l
 - Has the work been tested/validated?
 - Is this ready to ship/tag?
 
+**Requirements completion check (REQUIRED before presenting):**
+
+Parse `REQUIREMENTS.md` traceability table:
+- Count total v1 requirements vs checked-off (`[x]`) requirements
+- Identify any non-Complete rows
+
 Present:
 
 ```
@@ -76,6 +82,21 @@ Appears to include:
 
 Total: 4 phases, 8 plans, all complete
 ```
+
+If requirements are incomplete (`checked < total`), present:
+
+```
+⚠ Unchecked Requirements:
+- [ ] {REQ-ID}: {description} (Phase {X})
+...
+```
+
+Then ask user to choose:
+1. Proceed anyway (complete milestone with known gaps)
+2. Run audit first (`/gsd:audit-milestone`)
+3. Abort milestone completion
+
+If user proceeds with incomplete requirements, record them in `MILESTONES.md` under `### Known Gaps` with requirement IDs and descriptions.
 
 <config-check>
 
@@ -953,6 +974,9 @@ Milestone completion is successful when:
 - [ ] STATE.md updated with fresh project reference
 - [ ] Git tag created (v[X.Y])
 - [ ] Milestone commit made (includes archive files and deletion)
+- [ ] Requirements completion checked against REQUIREMENTS.md traceability table
+- [ ] Incomplete requirements surfaced with proceed/audit/abort options
+- [ ] Known gaps recorded in MILESTONES.md when user proceeds with incomplete requirements
 - [ ] User knows next step (/gsd:new-milestone)
 
 </success_criteria>
