@@ -431,7 +431,7 @@ wave: N                     # Execution wave (1, 2, 3...)
 depends_on: []              # Plan IDs this plan requires
 files_modified: []          # Files this plan touches
 autonomous: true            # false if plan has checkpoints
-requirements: []            # Requirement IDs this plan addresses (from ROADMAP)
+requirements: []            # REQUIRED — Requirement IDs from ROADMAP this plan addresses. MUST NOT be empty.
 user_setup: []              # Human-required setup (omit if empty)
 
 must_haves:
@@ -497,7 +497,7 @@ After completion, create `.planning/phases/XX-name/{phase}-{plan}-SUMMARY.md`
 | `depends_on` | Yes | Array of plan IDs this plan requires |
 | `files_modified` | Yes | Files this plan touches |
 | `autonomous` | Yes | `true` if no checkpoints, `false` if has checkpoints |
-| `requirements` | Yes | Requirement IDs this plan addresses (from ROADMAP) |
+| `requirements` | Yes | **MUST** list requirement IDs from ROADMAP. Every roadmap requirement ID MUST appear in at least one plan. |
 | `user_setup` | No | Human-required setup items |
 | `must_haves` | Yes | Goal-backward verification criteria |
 
@@ -546,7 +546,8 @@ Forward planning produces tasks. Goal-backward planning produces requirements th
 Read the phase `Requirements:` line in ROADMAP.md.
 - Strip brackets if present (e.g., `[AUTH-01, AUTH-02]` -> `AUTH-01, AUTH-02`)
 - Distribute requirement IDs across plan frontmatter `requirements` fields
-- Ensure every phase requirement ID appears in at least one plan
+- **CRITICAL:** Every phase requirement ID MUST appear in at least one plan
+- Plans with empty `requirements` are invalid
 
 **Step 1: State the Goal**
 Take the phase goal from ROADMAP.md. This is the outcome, not the work.
