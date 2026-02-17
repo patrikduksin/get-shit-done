@@ -287,7 +287,7 @@ Execute each wave in sequence. Autonomous plans within a wave run in parallel **
    <objective>
    Execute plan {plan_number} of phase {phase_number}-{phase_name}.
 
-   Commit each task atomically. Create SUMMARY.md. Update STATE.md.
+   Commit each task atomically. Create SUMMARY.md. Update STATE.md, ROADMAP.md, and REQUIREMENTS.md as required.
    </objective>
 
    <execution_context>
@@ -313,6 +313,7 @@ Execute each wave in sequence. Autonomous plans within a wave run in parallel **
    - [ ] Each task committed individually
    - [ ] SUMMARY.md created in plan directory
    - [ ] STATE.md updated with position and decisions
+   - [ ] ROADMAP.md progress and requirement tracking updated
    </success_criteria>
    ```
 

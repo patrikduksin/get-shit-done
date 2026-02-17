@@ -781,6 +781,18 @@ Stopped at: Completed {phase}-{plan}-PLAN.md
 Resume file: [path to .continue-here if exists, else "None"]
 ```
 
+**Update ROADMAP and REQUIREMENTS:**
+
+```bash
+# Keep roadmap plan counts/status synced from disk
+node ~/.claude/get-shit-done/bin/gsd-tools.cjs roadmap update-plan-progress "${PHASE_NUMBER}"
+
+# Mark requirement IDs from PLAN frontmatter as complete (if present)
+node ~/.claude/get-shit-done/bin/gsd-tools.cjs requirements mark-complete ${REQ_IDS}
+```
+
+Extract `REQ_IDS` from plan frontmatter `requirements:`. If no requirement IDs exist, skip marking.
+
 </state_updates>
 
 <final_commit>
@@ -795,6 +807,8 @@ After SUMMARY.md and STATE.md updates:
 ```bash
 git add .planning/phases/XX-name/{phase}-{plan}-SUMMARY.md
 git add .planning/STATE.md
+git add .planning/ROADMAP.md
+git add .planning/REQUIREMENTS.md
 ```
 
 **2. Commit metadata:**
@@ -846,6 +860,7 @@ Plan execution complete when:
 - [ ] Authentication gates handled and documented
 - [ ] SUMMARY.md created with substantive content
 - [ ] STATE.md updated (position, decisions, issues, session)
-- [ ] Final metadata commit made
+- [ ] ROADMAP.md updated with plan progress
+- [ ] Final metadata commit made (SUMMARY.md + STATE.md + ROADMAP.md + REQUIREMENTS.md)
 - [ ] Completion format returned to orchestrator
       </success_criteria>
