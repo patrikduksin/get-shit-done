@@ -244,12 +244,32 @@ function execGit(cwd, args) {
 }
 
 function normalizePhaseName(phase) {
-  const match = phase.match(/^(\d+(?:\.\d+)?)/);
+  const match = phase.match(/^(\d+)([A-Z])?(\.\d+)?/i);
   if (!match) return phase;
-  const num = match[1];
-  const parts = num.split('.');
-  const padded = parts[0].padStart(2, '0');
-  return parts.length > 1 ? `${padded}.${parts[1]}` : padded;
+  const padded = match[1].padStart(2, '0');
+  const letter = match[2] ? match[2].toUpperCase() : '';
+  const decimal = match[3] || '';
+  return padded + letter + decimal;
+}
+
+function comparePhaseNum(a, b) {
+  const pa = String(a).match(/^(\d+)([A-Z])?(\.\d+)?/i);
+  const pb = String(b).match(/^(\d+)([A-Z])?(\.\d+)?/i);
+  if (!pa || !pb) return String(a).localeCompare(String(b));
+  const intDiff = parseInt(pa[1], 10) - parseInt(pb[1], 10);
+  if (intDiff !== 0) return intDiff;
+  // No letter sorts before letter: 12 < 12A < 12B
+  const la = (pa[2] || '').toUpperCase();
+  const lb = (pb[2] || '').toUpperCase();
+  if (la !== lb) {
+    if (!la) return -1;
+    if (!lb) return 1;
+    return la < lb ? -1 : 1;
+  }
+  // No decimal sorts before decimal: 12A < 12A.1 < 12A.2
+  const da = pa[3] ? parseFloat(pa[3]) : -1;
+  const db = pb[3] ? parseFloat(pb[3]) : -1;
+  return da - db;
 }
 
 function extractFrontmatter(content) {
@@ -747,7 +767,7 @@ function cmdHistoryDigest(cwd, raw) {
       const currentDirs = fs.readdirSync(phasesDir, { withFileTypes: true })
         .filter(e => e.isDirectory())
         .map(e => e.name)
-        .sort();
+        .sort((a, b) => comparePhaseNum(a, b));
       for (const dir of currentDirs) {
         allPhaseDirs.push({ name: dir, fullPath: path.join(phasesDir, dir), milestone: null });
       }
@@ -856,12 +876,8 @@ function cmdPhasesList(cwd, options, raw) {
       }
     }
 
-    // Sort numerically (handles decimals: 01, 02, 02.1, 02.2, 03)
-    dirs.sort((a, b) => {
-      const aNum = parseFloat(a.match(/^(\d+(?:\.\d+)?)/)?.[1] || '0');
-      const bNum = parseFloat(b.match(/^(\d+(?:\.\d+)?)/)?.[1] || '0');
-      return aNum - bNum;
-    });
+    // Sort numerically (handles integers, decimals, letter-suffix, hybrids)
+    dirs.sort((a, b) => comparePhaseNum(a, b));
 
     // If filtering by phase number
     if (phase) {
@@ -1460,7 +1476,7 @@ function cmdFindPhase(cwd, phase, raw) {
 
   try {
     const entries = fs.readdirSync(phasesDir, { withFileTypes: true });
-    const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).sort();
+    const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).sort((a, b) => comparePhaseNum(a, b));
 
     const match = dirs.find(d => d.startsWith(normalized));
     if (!match) {
@@ -1468,7 +1484,7 @@ function cmdFindPhase(cwd, phase, raw) {
       return;
     }
 
-    const dirMatch = match.match(/^(\d+(?:\.\d+)?)-?(.*)/);
+    const dirMatch = match.match(/^(\d+[A-Z]?(?:\.\d+)?)-?(.*)/i);
     const phaseNumber = dirMatch ? dirMatch[1] : normalized;
     const phaseName = dirMatch && dirMatch[2] ? dirMatch[2] : null;
 
@@ -1861,7 +1877,7 @@ function cmdPhasePlanIndex(cwd, phase, raw) {
   let phaseDirName = null;
   try {
     const entries = fs.readdirSync(phasesDir, { withFileTypes: true });
-    const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).sort();
+    const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).sort((a, b) => comparePhaseNum(a, b));
     const match = dirs.find(d => d.startsWith(normalized));
     if (match) {
       phaseDir = path.join(phasesDir, match);
@@ -2546,7 +2562,7 @@ function cmdRoadmapAnalyze(cwd, raw) {
   const phasesDir = path.join(cwd, '.planning', 'phases');
 
   // Extract all phase headings: ## Phase N: Name or ### Phase N: Name
-  const phasePattern = /#{2,4}\s*Phase\s+(\d+(?:\.\d+)?)\s*:\s*([^\n]+)/gi;
+  const phasePattern = /#{2,4}\s*Phase\s+(\d+[A-Z]?(?:\.\d+)?)\s*:\s*([^\n]+)/gi;
   const phases = [];
   let match;
 
@@ -2636,7 +2652,7 @@ function cmdRoadmapAnalyze(cwd, raw) {
   const completedPhases = phases.filter(p => p.disk_status === 'complete').length;
 
   // Detect phases in summary list without detail sections (malformed ROADMAP)
-  const checklistPattern = /-\s*\[[ x]\]\s*\*\*Phase\s+(\d+(?:\.\d+)?)/gi;
+  const checklistPattern = /-\s*\[[ x]\]\s*\*\*Phase\s+(\d+[A-Z]?(?:\.\d+)?)/gi;
   const checklistPhases = new Set();
   let checklistMatch;
   while ((checklistMatch = checklistPattern.exec(content)) !== null) {
@@ -2677,7 +2693,7 @@ function cmdPhaseAdd(cwd, description, raw) {
   const slug = generateSlugInternal(description);
 
   // Find highest integer phase number
-  const phasePattern = /#{2,4}\s*Phase\s+(\d+)(?:\.\d+)?:/gi;
+  const phasePattern = /#{2,4}\s*Phase\s+(\d+)[A-Z]?(?:\.\d+)?:/gi;
   let maxPhase = 0;
   let m;
   while ((m = phasePattern.exec(content)) !== null) {
@@ -2825,7 +2841,7 @@ function cmdPhaseRemove(cwd, targetPhase, options, raw) {
   let targetDir = null;
   try {
     const entries = fs.readdirSync(phasesDir, { withFileTypes: true });
-    const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).sort();
+    const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).sort((a, b) => comparePhaseNum(a, b));
     targetDir = dirs.find(d => d.startsWith(normalized + '-') || d === normalized);
   } catch {}
 
@@ -2856,7 +2872,7 @@ function cmdPhaseRemove(cwd, targetPhase, options, raw) {
 
     try {
       const entries = fs.readdirSync(phasesDir, { withFileTypes: true });
-      const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).sort();
+      const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).sort((a, b) => comparePhaseNum(a, b));
 
       // Find sibling decimals with higher numbers
       const decPattern = new RegExp(`^${baseInt}\\.(\\d+)-(.+)$`);
@@ -2903,20 +2919,21 @@ function cmdPhaseRemove(cwd, targetPhase, options, raw) {
 
     try {
       const entries = fs.readdirSync(phasesDir, { withFileTypes: true });
-      const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).sort();
+      const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).sort((a, b) => comparePhaseNum(a, b));
 
-      // Collect directories that need renumbering (integer phases > removed, and their decimals)
+      // Collect directories that need renumbering (integer phases > removed, and their decimals/letters)
       const toRename = [];
       for (const dir of dirs) {
-        const dm = dir.match(/^(\d+)(?:\.(\d+))?-(.+)$/);
+        const dm = dir.match(/^(\d+)([A-Z])?(?:\.(\d+))?-(.+)$/i);
         if (!dm) continue;
         const dirInt = parseInt(dm[1], 10);
         if (dirInt > removedInt) {
           toRename.push({
             dir,
             oldInt: dirInt,
-            decimal: dm[2] ? parseInt(dm[2], 10) : null,
-            slug: dm[3],
+            letter: dm[2] ? dm[2].toUpperCase() : '',
+            decimal: dm[3] ? parseInt(dm[3], 10) : null,
+            slug: dm[4],
           });
         }
       }
@@ -2931,9 +2948,10 @@ function cmdPhaseRemove(cwd, targetPhase, options, raw) {
         const newInt = item.oldInt - 1;
         const newPadded = String(newInt).padStart(2, '0');
         const oldPadded = String(item.oldInt).padStart(2, '0');
+        const letterSuffix = item.letter || '';
         const decimalSuffix = item.decimal !== null ? `.${item.decimal}` : '';
-        const oldPrefix = `${oldPadded}${decimalSuffix}`;
-        const newPrefix = `${newPadded}${decimalSuffix}`;
+        const oldPrefix = `${oldPadded}${letterSuffix}${decimalSuffix}`;
+        const newPrefix = `${newPadded}${letterSuffix}${decimalSuffix}`;
         const newDirName = `${newPrefix}-${item.slug}`;
 
         // Rename directory
@@ -3224,15 +3242,13 @@ function cmdPhaseComplete(cwd, phaseNum, raw) {
 
   try {
     const entries = fs.readdirSync(phasesDir, { withFileTypes: true });
-    const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).sort();
-    const currentFloat = parseFloat(phaseNum);
+    const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).sort((a, b) => comparePhaseNum(a, b));
 
     // Find the next phase directory after current
     for (const dir of dirs) {
-      const dm = dir.match(/^(\d+(?:\.\d+)?)-?(.*)/);
+      const dm = dir.match(/^(\d+[A-Z]?(?:\.\d+)?)-?(.*)/i);
       if (dm) {
-        const dirFloat = parseFloat(dm[1]);
-        if (dirFloat > currentFloat) {
+        if (comparePhaseNum(dm[1], phaseNum) > 0) {
           nextPhaseNum = dm[1];
           nextPhaseName = dm[2] || null;
           isLastPhase = false;
@@ -3329,7 +3345,7 @@ function cmdMilestoneComplete(cwd, version, options, raw) {
 
   try {
     const entries = fs.readdirSync(phasesDir, { withFileTypes: true });
-    const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).sort();
+    const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).sort((a, b) => comparePhaseNum(a, b));
 
     for (const dir of dirs) {
       phaseCount++;
@@ -3458,7 +3474,7 @@ function cmdValidateConsistency(cwd, raw) {
 
   // Extract phases from ROADMAP
   const roadmapPhases = new Set();
-  const phasePattern = /#{2,4}\s*Phase\s+(\d+(?:\.\d+)?)\s*:/gi;
+  const phasePattern = /#{2,4}\s*Phase\s+(\d+[A-Z]?(?:\.\d+)?)\s*:/gi;
   let m;
   while ((m = phasePattern.exec(roadmapContent)) !== null) {
     roadmapPhases.add(m[1]);
@@ -3470,7 +3486,7 @@ function cmdValidateConsistency(cwd, raw) {
     const entries = fs.readdirSync(phasesDir, { withFileTypes: true });
     const dirs = entries.filter(e => e.isDirectory()).map(e => e.name);
     for (const dir of dirs) {
-      const dm = dir.match(/^(\d+(?:\.\d+)?)/);
+      const dm = dir.match(/^(\d+[A-Z]?(?:\.\d+)?)/i);
       if (dm) diskPhases.add(dm[1]);
     }
   } catch {}
@@ -3505,7 +3521,7 @@ function cmdValidateConsistency(cwd, raw) {
   // Check: plan numbering within phases
   try {
     const entries = fs.readdirSync(phasesDir, { withFileTypes: true });
-    const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).sort();
+    const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).sort((a, b) => comparePhaseNum(a, b));
 
     for (const dir of dirs) {
       const phaseFiles = fs.readdirSync(path.join(phasesDir, dir));
@@ -3629,7 +3645,7 @@ function cmdValidateHealth(cwd, options, raw) {
       const entries = fs.readdirSync(phasesDir, { withFileTypes: true });
       for (const e of entries) {
         if (e.isDirectory()) {
-          const m = e.name.match(/^(\d+(?:\.\d+)?)/);
+          const m = e.name.match(/^(\d+[A-Z]?(?:\.\d+)?)/i);
           if (m) diskPhases.add(m[1]);
         }
       }
@@ -3700,7 +3716,7 @@ function cmdValidateHealth(cwd, options, raw) {
   if (fs.existsSync(roadmapPath)) {
     const roadmapContent = fs.readFileSync(roadmapPath, 'utf-8');
     const roadmapPhases = new Set();
-    const phasePattern = /#{2,4}\s*Phase\s+(\d+(?:\.\d+)?)\s*:/gi;
+    const phasePattern = /#{2,4}\s*Phase\s+(\d+[A-Z]?(?:\.\d+)?)\s*:/gi;
     let m;
     while ((m = phasePattern.exec(roadmapContent)) !== null) {
       roadmapPhases.add(m[1]);
@@ -3711,7 +3727,7 @@ function cmdValidateHealth(cwd, options, raw) {
       const entries = fs.readdirSync(phasesDir, { withFileTypes: true });
       for (const e of entries) {
         if (e.isDirectory()) {
-          const dm = e.name.match(/^(\d+(?:\.\d+)?)/);
+          const dm = e.name.match(/^(\d+[A-Z]?(?:\.\d+)?)/i);
           if (dm) diskPhases.add(dm[1]);
         }
       }
@@ -3815,14 +3831,10 @@ function cmdProgressRender(cwd, format, raw) {
 
   try {
     const entries = fs.readdirSync(phasesDir, { withFileTypes: true });
-    const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).sort((a, b) => {
-      const aNum = parseFloat(a.match(/^(\d+(?:\.\d+)?)/)?.[1] || '0');
-      const bNum = parseFloat(b.match(/^(\d+(?:\.\d+)?)/)?.[1] || '0');
-      return aNum - bNum;
-    });
+    const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).sort((a, b) => comparePhaseNum(a, b));
 
     for (const dir of dirs) {
-      const dm = dir.match(/^(\d+(?:\.\d+)?)-?(.*)/);
+      const dm = dir.match(/^(\d+[A-Z]?(?:\.\d+)?)-?(.*)/i);
       const phaseNum = dm ? dm[1] : dir;
       const phaseName = dm && dm[2] ? dm[2].replace(/-/g, ' ') : '';
       const phaseFiles = fs.readdirSync(path.join(phasesDir, dir));
@@ -4003,7 +4015,7 @@ function getArchivedPhaseDirs(cwd) {
       const version = archiveName.match(/^(v[\d.]+)-phases$/)[1];
       const archivePath = path.join(milestonesDir, archiveName);
       const entries = fs.readdirSync(archivePath, { withFileTypes: true });
-      const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).sort();
+      const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).sort((a, b) => comparePhaseNum(a, b));
 
       for (const dir of dirs) {
         results.push({
@@ -4022,11 +4034,11 @@ function getArchivedPhaseDirs(cwd) {
 function searchPhaseInDir(baseDir, relBase, normalized) {
   try {
     const entries = fs.readdirSync(baseDir, { withFileTypes: true });
-    const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).sort();
+    const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).sort((a, b) => comparePhaseNum(a, b));
     const match = dirs.find(d => d.startsWith(normalized));
     if (!match) return null;
 
-    const dirMatch = match.match(/^(\d+(?:\.\d+)?)-?(.*)/);
+    const dirMatch = match.match(/^(\d+[A-Z]?(?:\.\d+)?)-?(.*)/i);
     const phaseNumber = dirMatch ? dirMatch[1] : normalized;
     const phaseName = dirMatch && dirMatch[2] ? dirMatch[2] : null;
     const phaseDir = path.join(baseDir, match);
@@ -4739,10 +4751,10 @@ function cmdInitProgress(cwd, includes, raw) {
 
   try {
     const entries = fs.readdirSync(phasesDir, { withFileTypes: true });
-    const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).sort();
+    const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).sort((a, b) => comparePhaseNum(a, b));
 
     for (const dir of dirs) {
-      const match = dir.match(/^(\d+(?:\.\d+)?)-?(.*)/);
+      const match = dir.match(/^(\d+[A-Z]?(?:\.\d+)?)-?(.*)/i);
       const phaseNumber = match ? match[1] : dir;
       const phaseName = match && match[2] ? match[2] : null;
 
@@ -5240,4 +5252,9 @@ async function main() {
   }
 }
 
-main();
+// Export utility functions for testing; only run CLI when executed directly
+if (require.main === module) {
+  main();
+}
+
+module.exports = { comparePhaseNum, normalizePhaseName };
