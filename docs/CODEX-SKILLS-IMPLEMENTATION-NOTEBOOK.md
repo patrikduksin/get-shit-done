@@ -76,3 +76,4 @@
 ## Commit Log
 - [2026-02-18] `409fc0d` — `chore: add codex skills implementation notebook`
 - [2026-02-18] `5a733dc` — `feat: add codex skills-first installer runtime`
+- [2026-02-18] `12692ee` — `docs: add codex usage guidance and update notebook`
