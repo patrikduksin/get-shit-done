@@ -333,6 +333,7 @@ Execute each wave in sequence. Autonomous plans within a wave run in parallel **
        - Plan: {phase_dir}/{plan_file}
        - State: .planning/STATE.md
        - Config: .planning/config.json (if exists)
+       - Project instructions: ./CLAUDE.md (if exists — follow project-specific guidelines and coding conventions)
        - Project skills: .agents/skills/ (if exists — list skills, read SKILL.md for each, follow relevant rules during implementation)
        </files_to_read>
 
