@@ -40,11 +40,7 @@ Extract **Product Vision** decisions that downstream agents need — researcher 
 <context>
 Phase number: $ARGUMENTS (required)
 
-**Load project state:**
-@.planning/STATE.md
-
-**Load roadmap:**
-@.planning/ROADMAP.md
+Context files are resolved in-workflow using `init phase-op` and roadmap/state tool calls.
 </context>
 
 <process>
