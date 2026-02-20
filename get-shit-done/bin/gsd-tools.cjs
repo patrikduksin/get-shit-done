@@ -167,6 +167,7 @@ function loadConfig(cwd) {
     verifier: true,
     parallelization: true,
     brave_search: false,
+    nyquist_validation: true,
   };
 
   try {
@@ -199,6 +200,7 @@ function loadConfig(cwd) {
       plan_checker: get('plan_checker', { section: 'workflow', field: 'plan_check' }) ?? defaults.plan_checker,
       verifier: get('verifier', { section: 'workflow', field: 'verifier' }) ?? defaults.verifier,
       parallelization,
+      nyquist_validation: get('nyquist_validation', { section: 'workflow', field: 'nyquist_validation' }) ?? defaults.nyquist_validation,
       brave_search: get('brave_search') ?? defaults.brave_search,
     };
   } catch {
@@ -4331,6 +4333,7 @@ function cmdInitPlanPhase(cwd, phase, raw) {
     research_enabled: config.research,
     plan_checker_enabled: config.plan_checker,
     commit_docs: config.commit_docs,
+    nyquist_validation_enabled: config.nyquist_validation,
 
     // Phase info
     phase_found: !!phaseInfo,
