@@ -1032,6 +1032,207 @@ describe('phase complete command', () => {
     const result = runGsdTools('phase complete 1', tmpDir);
     assert.ok(result.success, `Command should succeed even without REQUIREMENTS.md: ${result.error}`);
   });
+
+  test('handles multi-level decimal phase without regex crash', () => {
+    fs.writeFileSync(
+      path.join(tmpDir, '.planning', 'ROADMAP.md'),
+      `# Roadmap
+
+- [x] Phase 3: Lorem
+- [x] Phase 3.2: Ipsum
+- [ ] Phase 3.2.1: Dolor Sit
+- [ ] Phase 4: Amet
+
+### Phase 3: Lorem
+**Goal:** Setup
+**Plans:** 1/1 plans complete
+**Requirements:** LOR-01
+
+### Phase 3.2: Ipsum
+**Goal:** Build
+**Plans:** 1/1 plans complete
+**Requirements:** IPS-01
+
+### Phase 03.2.1: Dolor Sit Polish (INSERTED)
+**Goal:** Polish
+**Plans:** 1/1 plans complete
+
+### Phase 4: Amet
+**Goal:** Deliver
+**Requirements:** AMT-01: Filter items by category with AND logic (items matching ALL selected categories)
+`
+    );
+
+    fs.writeFileSync(
+      path.join(tmpDir, '.planning', 'REQUIREMENTS.md'),
+      `# Requirements
+
+- [ ] **LOR-01**: Lorem database schema
+- [ ] **IPS-01**: Ipsum rendering engine
+- [ ] **AMT-01**: Filter items by category
+`
+    );
+
+    fs.writeFileSync(
+      path.join(tmpDir, '.planning', 'STATE.md'),
+      `# State
+
+**Current Phase:** 03.2.1
+**Current Phase Name:** Dolor Sit Polish
+**Status:** Execution complete
+**Current Plan:** 03.2.1-01
+**Last Activity:** 2025-01-01
+**Last Activity Description:** Working
+`
+    );
+
+    const p32 = path.join(tmpDir, '.planning', 'phases', '03.2-ipsum');
+    const p321 = path.join(tmpDir, '.planning', 'phases', '03.2.1-dolor-sit');
+    const p4 = path.join(tmpDir, '.planning', 'phases', '04-amet');
+    fs.mkdirSync(p32, { recursive: true });
+    fs.mkdirSync(p321, { recursive: true });
+    fs.mkdirSync(p4, { recursive: true });
+    fs.writeFileSync(path.join(p321, '03.2.1-01-PLAN.md'), '# Plan');
+    fs.writeFileSync(path.join(p321, '03.2.1-01-SUMMARY.md'), '# Summary');
+
+    const result = runGsdTools('phase complete 03.2.1', tmpDir);
+    assert.ok(result.success, `Command should not crash on regex metacharacters: ${result.error}`);
+
+    const req = fs.readFileSync(path.join(tmpDir, '.planning', 'REQUIREMENTS.md'), 'utf-8');
+    assert.ok(req.includes('- [ ] **AMT-01**'), 'AMT-01 should remain unchanged');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// comparePhaseNum and normalizePhaseName (imported directly)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const { comparePhaseNum, normalizePhaseName } = require('../get-shit-done/bin/lib/core.cjs');
+
+describe('comparePhaseNum', () => {
+  test('sorts integer phases numerically', () => {
+    assert.ok(comparePhaseNum('2', '10') < 0);
+    assert.ok(comparePhaseNum('10', '2') > 0);
+    assert.strictEqual(comparePhaseNum('5', '5'), 0);
+  });
+
+  test('sorts decimal phases correctly', () => {
+    assert.ok(comparePhaseNum('12', '12.1') < 0);
+    assert.ok(comparePhaseNum('12.1', '12.2') < 0);
+    assert.ok(comparePhaseNum('12.2', '13') < 0);
+  });
+
+  test('sorts letter-suffix phases correctly', () => {
+    assert.ok(comparePhaseNum('12', '12A') < 0);
+    assert.ok(comparePhaseNum('12A', '12B') < 0);
+    assert.ok(comparePhaseNum('12B', '13') < 0);
+  });
+
+  test('sorts hybrid phases correctly', () => {
+    assert.ok(comparePhaseNum('12A', '12A.1') < 0);
+    assert.ok(comparePhaseNum('12A.1', '12A.2') < 0);
+    assert.ok(comparePhaseNum('12A.2', '12B') < 0);
+  });
+
+  test('handles full sort order', () => {
+    const phases = ['13', '12B', '12A.2', '12', '12.1', '12A', '12A.1', '12.2'];
+    phases.sort(comparePhaseNum);
+    assert.deepStrictEqual(phases, ['12', '12.1', '12.2', '12A', '12A.1', '12A.2', '12B', '13']);
+  });
+
+  test('handles directory names with slugs', () => {
+    const dirs = ['13-deploy', '12B-hotfix', '12A.1-bugfix', '12-foundation', '12.1-inserted', '12A-split'];
+    dirs.sort(comparePhaseNum);
+    assert.deepStrictEqual(dirs, [
+      '12-foundation', '12.1-inserted', '12A-split', '12A.1-bugfix', '12B-hotfix', '13-deploy'
+    ]);
+  });
+
+  test('case insensitive letter matching', () => {
+    assert.ok(comparePhaseNum('12a', '12B') < 0);
+    assert.ok(comparePhaseNum('12A', '12b') < 0);
+    assert.strictEqual(comparePhaseNum('12a', '12A'), 0);
+  });
+
+  test('sorts multi-level decimal phases correctly', () => {
+    assert.ok(comparePhaseNum('3.2', '3.2.1') < 0);
+    assert.ok(comparePhaseNum('3.2.1', '3.2.2') < 0);
+    assert.ok(comparePhaseNum('3.2.1', '3.3') < 0);
+    assert.ok(comparePhaseNum('3.2.1', '4') < 0);
+    assert.strictEqual(comparePhaseNum('3.2.1', '3.2.1'), 0);
+  });
+
+  test('falls back to localeCompare for non-phase strings', () => {
+    const result = comparePhaseNum('abc', 'def');
+    assert.strictEqual(typeof result, 'number');
+  });
+});
+
+describe('normalizePhaseName', () => {
+  test('pads single-digit integers', () => {
+    assert.strictEqual(normalizePhaseName('3'), '03');
+    assert.strictEqual(normalizePhaseName('12'), '12');
+  });
+
+  test('handles decimal phases', () => {
+    assert.strictEqual(normalizePhaseName('3.1'), '03.1');
+    assert.strictEqual(normalizePhaseName('12.2'), '12.2');
+  });
+
+  test('handles letter-suffix phases', () => {
+    assert.strictEqual(normalizePhaseName('3A'), '03A');
+    assert.strictEqual(normalizePhaseName('12B'), '12B');
+  });
+
+  test('handles hybrid phases', () => {
+    assert.strictEqual(normalizePhaseName('3A.1'), '03A.1');
+    assert.strictEqual(normalizePhaseName('12A.2'), '12A.2');
+  });
+
+  test('uppercases letters', () => {
+    assert.strictEqual(normalizePhaseName('3a'), '03A');
+    assert.strictEqual(normalizePhaseName('12b.1'), '12B.1');
+  });
+
+  test('handles multi-level decimal phases', () => {
+    assert.strictEqual(normalizePhaseName('3.2.1'), '03.2.1');
+    assert.strictEqual(normalizePhaseName('12.3.4'), '12.3.4');
+  });
+
+  test('returns non-matching input unchanged', () => {
+    assert.strictEqual(normalizePhaseName('abc'), 'abc');
+  });
+});
+
+describe('letter-suffix phase sorting', () => {
+  let tmpDir;
+
+  beforeEach(() => {
+    tmpDir = createTempProject();
+  });
+
+  afterEach(() => {
+    cleanup(tmpDir);
+  });
+
+  test('lists letter-suffix phases in correct order', () => {
+    fs.mkdirSync(path.join(tmpDir, '.planning', 'phases', '12-foundation'), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, '.planning', 'phases', '12.1-inserted'), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, '.planning', 'phases', '12A-split'), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, '.planning', 'phases', '12A.1-bugfix'), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, '.planning', 'phases', '12B-hotfix'), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, '.planning', 'phases', '13-deploy'), { recursive: true });
+
+    const result = runGsdTools('phases list', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.deepStrictEqual(
+      output.directories,
+      ['12-foundation', '12.1-inserted', '12A-split', '12A.1-bugfix', '12B-hotfix', '13-deploy'],
+      'letter-suffix phases should sort correctly'
+    );
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
