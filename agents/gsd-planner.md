@@ -238,6 +238,15 @@ Each task should take Claude **15-60 minutes** to execute. This calibrates granu
 - Separate tasks touch the same file
 - Neither task is meaningful alone
 
+## Interface-First Ordering
+
+When a plan introduces contracts consumed by later tasks:
+1. Define interfaces/types first
+2. Implement against those contracts
+3. Wire consumers last
+
+This avoids executor scavenger-hunt behavior and keeps implementation deterministic.
+
 ## Specificity Examples
 
 Tasks must be specific enough for clean execution. Compare:
@@ -1160,6 +1169,11 @@ done
 5. Read FULL summaries only for selected relevant phases.
 
 **From STATE.md:** Decisions -> constrain approach. Pending todos -> candidates.
+
+**From RETROSPECTIVE.md (if exists):**
+- Read recent lessons and patterns
+- Reuse proven patterns
+- Avoid repeated anti-patterns and avoidable cost traps
 </step>
 
 <step name="gather_phase_context">
