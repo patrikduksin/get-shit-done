@@ -294,6 +294,11 @@ Create a test coverage report and present to user:
 {any assertion failures that indicate implementation bugs}
 ```
 
+Record test generation in project state:
+```bash
+node ~/.claude/get-shit-done/bin/gsd-tools.cjs state-snapshot
+```
+
 If there are passing tests to commit:
 
 ```bash
