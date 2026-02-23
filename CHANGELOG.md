@@ -6,6 +6,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.20.6] - 2025-02-23
+
+### Added
+- Context window monitor hook with WARNING/CRITICAL alerts when agent context usage exceeds thresholds
+- Nyquist validation layer in plan-phase pipeline to catch quality issues before execution
+- Option highlighting and gray area looping in discuss-phase for clearer preference capture
+
+### Changed
+- Refactored installer tools into 11 domain modules for maintainability
+
+### Fixed
+- Auto-advance chain no longer breaks when skills fail to resolve inside Task subagents
+- Gemini CLI workflows and templates no longer incorrectly convert to TOML format
+- Universal phase number parsing handles all formats consistently (decimal phases, plain numbers)
+
 ## [1.20.5] - 2026-02-19
 
 ### Fixed
@@ -1319,7 +1334,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - YOLO mode for autonomous execution
 - Interactive mode with checkpoints
 
-[Unreleased]: https://github.com/glittercowboy/get-shit-done/compare/v1.20.5...HEAD
+[Unreleased]: https://github.com/glittercowboy/get-shit-done/compare/v1.20.6...HEAD
+[1.20.6]: https://github.com/glittercowboy/get-shit-done/releases/tag/v1.20.6
 [1.20.5]: https://github.com/glittercowboy/get-shit-done/releases/tag/v1.20.5
 [1.20.4]: https://github.com/glittercowboy/get-shit-done/releases/tag/v1.20.4
 [1.20.3]: https://github.com/glittercowboy/get-shit-done/releases/tag/v1.20.3
