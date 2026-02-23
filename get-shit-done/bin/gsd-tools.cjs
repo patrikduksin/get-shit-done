@@ -123,6 +123,8 @@
  *   init progress                      All context for progress workflow
  */
 
+const fs = require('fs');
+const path = require('path');
 const { error } = require('./lib/core.cjs');
 const state = require('./lib/state.cjs');
 const phase = require('./lib/phase.cjs');
@@ -139,15 +141,35 @@ const frontmatter = require('./lib/frontmatter.cjs');
 
 async function main() {
   const args = process.argv.slice(2);
+
+  // Optional cwd override for sandboxed subagents running outside project root.
+  let cwd = process.cwd();
+  const cwdEqArg = args.find(arg => arg.startsWith('--cwd='));
+  const cwdIdx = args.indexOf('--cwd');
+  if (cwdEqArg) {
+    const value = cwdEqArg.slice('--cwd='.length).trim();
+    if (!value) error('Missing value for --cwd');
+    args.splice(args.indexOf(cwdEqArg), 1);
+    cwd = path.resolve(value);
+  } else if (cwdIdx !== -1) {
+    const value = args[cwdIdx + 1];
+    if (!value || value.startsWith('--')) error('Missing value for --cwd');
+    args.splice(cwdIdx, 2);
+    cwd = path.resolve(value);
+  }
+
+  if (!fs.existsSync(cwd) || !fs.statSync(cwd).isDirectory()) {
+    error(`Invalid --cwd: ${cwd}`);
+  }
+
   const rawIndex = args.indexOf('--raw');
   const raw = rawIndex !== -1;
   if (rawIndex !== -1) args.splice(rawIndex, 1);
 
   const command = args[0];
-  const cwd = process.cwd();
 
   if (!command) {
-    error('Usage: gsd-tools <command> [args] [--raw]\nCommands: state, resolve-model, find-phase, commit, verify-summary, verify, frontmatter, template, generate-slug, current-timestamp, list-todos, verify-path-exists, config-ensure-section, init');
+    error('Usage: gsd-tools <command> [args] [--raw] [--cwd <path>]\nCommands: state, resolve-model, find-phase, commit, verify-summary, verify, frontmatter, template, generate-slug, current-timestamp, list-todos, verify-path-exists, config-ensure-section, init');
   }
 
   switch (command) {
