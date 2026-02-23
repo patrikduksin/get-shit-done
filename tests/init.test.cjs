@@ -168,6 +168,20 @@ describe('init commands', () => {
     assert.strictEqual(output.phase_req_ids, 'EX-01, EX-02');
   });
 
+  test('init plan-phase returns null phase_req_ids when value is TBD', () => {
+    fs.mkdirSync(path.join(tmpDir, '.planning', 'phases', '03-api'), { recursive: true });
+    fs.writeFileSync(
+      path.join(tmpDir, '.planning', 'ROADMAP.md'),
+      `# Roadmap\n\n### Phase 3: API\n**Goal:** Build API\n**Requirements**: TBD\n**Plans:** 0 plans\n`
+    );
+
+    const result = runGsdTools('init plan-phase 3', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.phase_req_ids, null, 'TBD placeholder should return null');
+  });
+
   test('init execute-phase returns null phase_req_ids when Requirements line is absent', () => {
     const phaseDir = path.join(tmpDir, '.planning', 'phases', '03-api');
     fs.mkdirSync(phaseDir, { recursive: true });
