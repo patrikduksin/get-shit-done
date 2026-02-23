@@ -6,11 +6,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-### Fixed
-- `gsd-tools state-snapshot` supports `--cwd <path>` so tooling can target a project directory when invoked from outside the repo
+### Added
+- Native Codex runtime support in installer via `--codex` and `--all` (Codex included), with config resolution precedence: `--config-dir` → `CODEX_HOME` → `~/.codex`
+- Skills-first Codex installation path that transpiles GSD commands to `skills/gsd-*/SKILL.md` (no custom-prompt dependency)
+- Codex-specific install/uninstall + manifest support for skill layout tracking and cleanup
 
 ### Changed
+- Codex-installed content rewrites slash-command references to skill mentions (`/gsd:*` → `$gsd-*`) and normalizes command arguments (`$ARGUMENTS` → `{{GSD_ARGS}}`)
+- README/package metadata updated to document Codex install, invocation (`$gsd-help`), and uninstall flow
 - `/gsd:debug` flow now requires a `human-verify` checkpoint after self-verification before marking debug sessions `resolved` and moving files to `.planning/debug/resolved/`
+
+### Fixed
+- `gsd-tools state-snapshot` supports `--cwd <path>` so tooling can target a project directory when invoked from outside the repo
+- `/gsd:update` now installs with `npx get-shit-done-cc@latest` (instead of unpinned `npx get-shit-done-cc`) to prevent stale project-local versions from shadowing updates
+- `/gsd:update` now uses strict package safety checks: only `get-shit-done-cc` is allowed, scoped/user-derived package names are rejected, and install command execution is allowlisted to trusted forms
+- `/gsd:update` install detection now validates local integrity and falls back to global install when local metadata is missing or invalid
 
 ## [1.20.6] - 2025-02-23
 
