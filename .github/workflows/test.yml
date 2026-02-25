@@ -41,5 +41,10 @@ jobs:
         run: npm test
 
       - name: Run tests with coverage
-        if: github.event_name == 'pull_request'
+        # c8 v11 requires Node 20+ (engines: ^20.0.0 || >=22.0.0). Node 18 EOL April 2025.
+        if: github.event_name == 'pull_request' && matrix.node-version != 18
         run: npm run test:coverage
+
+      - name: Run tests (Node 18, coverage not supported)
+        if: github.event_name == 'pull_request' && matrix.node-version == 18
+        run: npm test
