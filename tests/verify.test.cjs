@@ -6,7 +6,8 @@ const { test, describe, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
-const { runGsdTools, createTempProject, cleanup } = require('./helpers.cjs');
+const { runGsdTools, createTempProject, createTempGitProject, cleanup } = require('./helpers.cjs');
+const { execSync } = require('child_process');
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -377,6 +378,171 @@ describe('verify phase-completeness command', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// progress command
+// verify-summary command
 // ─────────────────────────────────────────────────────────────────────────────
+
+describe('verify summary command', () => {
+  let tmpDir;
+
+  beforeEach(() => {
+    tmpDir = createTempGitProject();
+    fs.mkdirSync(path.join(tmpDir, '.planning', 'phases', '01-test'), { recursive: true });
+  });
+
+  afterEach(() => {
+    cleanup(tmpDir);
+  });
+
+  test('returns not found for nonexistent summary', () => {
+    const result = runGsdTools('verify-summary .planning/phases/01-test/nonexistent.md', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.passed, false, 'should not pass');
+    assert.strictEqual(output.checks.summary_exists, false, 'summary should not exist');
+    assert.ok(
+      output.errors.some(e => e.includes('SUMMARY.md not found')),
+      `Expected "SUMMARY.md not found" in errors: ${JSON.stringify(output.errors)}`
+    );
+  });
+
+  test('passes for valid summary with real files and commits', () => {
+    // Create a source file and commit it
+    fs.mkdirSync(path.join(tmpDir, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, 'src', 'app.js'), 'console.log("hello");\n');
+    execSync('git add -A', { cwd: tmpDir, stdio: 'pipe' });
+    execSync('git commit -m "add app.js"', { cwd: tmpDir, stdio: 'pipe' });
+
+    const hash = execSync('git rev-parse --short HEAD', { cwd: tmpDir, encoding: 'utf-8' }).trim();
+
+    // Write SUMMARY.md referencing the file and commit hash
+    const summaryPath = path.join(tmpDir, '.planning', 'phases', '01-test', '01-01-SUMMARY.md');
+    fs.writeFileSync(summaryPath, [
+      '# Summary',
+      '',
+      `Created: \`src/app.js\``,
+      '',
+      `Commit: ${hash}`,
+    ].join('\n'));
+
+    const result = runGsdTools('verify-summary .planning/phases/01-test/01-01-SUMMARY.md', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.passed, true, `should pass, errors: ${JSON.stringify(output.errors)}`);
+    assert.strictEqual(output.checks.summary_exists, true, 'summary should exist');
+    assert.strictEqual(output.checks.commits_exist, true, 'commits should exist');
+  });
+
+  test('reports missing files mentioned in summary', () => {
+    const summaryPath = path.join(tmpDir, '.planning', 'phases', '01-test', '01-01-SUMMARY.md');
+    fs.writeFileSync(summaryPath, [
+      '# Summary',
+      '',
+      'Created: `src/nonexistent.js`',
+    ].join('\n'));
+
+    const result = runGsdTools('verify-summary .planning/phases/01-test/01-01-SUMMARY.md', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.ok(
+      output.checks.files_created.missing.includes('src/nonexistent.js'),
+      `Expected missing to include "src/nonexistent.js": ${JSON.stringify(output.checks.files_created.missing)}`
+    );
+  });
+
+  test('detects self-check section with pass indicators', () => {
+    const summaryPath = path.join(tmpDir, '.planning', 'phases', '01-test', '01-01-SUMMARY.md');
+    fs.writeFileSync(summaryPath, [
+      '# Summary',
+      '',
+      '## Self-Check',
+      '',
+      'All tests pass',
+    ].join('\n'));
+
+    const result = runGsdTools('verify-summary .planning/phases/01-test/01-01-SUMMARY.md', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.checks.self_check, 'passed', `Expected self_check "passed": ${JSON.stringify(output.checks)}`);
+  });
+
+  test('detects self-check section with fail indicators', () => {
+    const summaryPath = path.join(tmpDir, '.planning', 'phases', '01-test', '01-01-SUMMARY.md');
+    fs.writeFileSync(summaryPath, [
+      '# Summary',
+      '',
+      '## Verification',
+      '',
+      'Tests failed',
+    ].join('\n'));
+
+    const result = runGsdTools('verify-summary .planning/phases/01-test/01-01-SUMMARY.md', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.checks.self_check, 'failed', `Expected self_check "failed": ${JSON.stringify(output.checks)}`);
+  });
+
+  test('REG-03: returns self_check "not_found" when no self-check section exists', () => {
+    const summaryPath = path.join(tmpDir, '.planning', 'phases', '01-test', '01-01-SUMMARY.md');
+    fs.writeFileSync(summaryPath, [
+      '# Summary',
+      '',
+      '## Accomplishments',
+      '',
+      'Everything went well.',
+    ].join('\n'));
+
+    const result = runGsdTools('verify-summary .planning/phases/01-test/01-01-SUMMARY.md', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.checks.self_check, 'not_found', `Expected self_check "not_found": ${JSON.stringify(output.checks)}`);
+    assert.strictEqual(output.passed, true, `Missing self-check should not fail: ${JSON.stringify(output)}`);
+  });
+
+  test('search(-1) regression: self-check guard prevents entry when no heading', () => {
+    // No Self-Check/Verification/Quality Check heading — guard on line 79 prevents
+    // content.search(selfCheckPattern) from ever being called, so -1 is impossible
+    const summaryPath = path.join(tmpDir, '.planning', 'phases', '01-test', '01-01-SUMMARY.md');
+    fs.writeFileSync(summaryPath, [
+      '# Summary',
+      '',
+      '## Notes',
+      '',
+      'Some content here without a self-check heading.',
+    ].join('\n'));
+
+    const result = runGsdTools('verify-summary .planning/phases/01-test/01-01-SUMMARY.md', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    // Guard works: selfCheckPattern.test() is false, if block not entered, selfCheck stays 'not_found'
+    assert.strictEqual(output.checks.self_check, 'not_found', `Expected not_found since no heading: ${JSON.stringify(output.checks)}`);
+  });
+
+  test('respects checkFileCount parameter', () => {
+    // Write summary referencing 5 files (none exist)
+    const summaryPath = path.join(tmpDir, '.planning', 'phases', '01-test', '01-01-SUMMARY.md');
+    fs.writeFileSync(summaryPath, [
+      '# Summary',
+      '',
+      'Files: `src/a.js`, `src/b.js`, `src/c.js`, `src/d.js`, `src/e.js`',
+    ].join('\n'));
+
+    // Pass checkFileCount = 1 so only 1 file is checked
+    const result = runGsdTools('verify-summary .planning/phases/01-test/01-01-SUMMARY.md --check-count 1', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.ok(
+      output.checks.files_created.checked <= 1,
+      `Expected checked <= 1, got ${output.checks.files_created.checked}`
+    );
+  });
+});
+
 
