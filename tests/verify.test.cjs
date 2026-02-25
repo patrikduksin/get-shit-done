@@ -545,4 +545,469 @@ describe('verify summary command', () => {
   });
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// verify references command
+// ─────────────────────────────────────────────────────────────────────────────
 
+describe('verify references command', () => {
+  let tmpDir;
+
+  beforeEach(() => {
+    tmpDir = createTempProject();
+    fs.mkdirSync(path.join(tmpDir, 'src', 'utils'), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, '.planning', 'phases', '01-test'), { recursive: true });
+  });
+
+  afterEach(() => {
+    cleanup(tmpDir);
+  });
+
+  test('reports valid when all referenced files exist', () => {
+    fs.writeFileSync(path.join(tmpDir, 'src', 'app.js'), 'console.log("app");\n');
+    const filePath = path.join(tmpDir, '.planning', 'phases', '01-test', 'doc.md');
+    fs.writeFileSync(filePath, '@src/app.js\n');
+
+    const result = runGsdTools('verify references .planning/phases/01-test/doc.md', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.valid, true, `should be valid: ${JSON.stringify(output)}`);
+    assert.strictEqual(output.found, 1, `should find 1 file: ${JSON.stringify(output)}`);
+  });
+
+  test('reports missing for nonexistent referenced files', () => {
+    const filePath = path.join(tmpDir, '.planning', 'phases', '01-test', 'doc.md');
+    fs.writeFileSync(filePath, '@src/missing.js\n');
+
+    const result = runGsdTools('verify references .planning/phases/01-test/doc.md', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.valid, false, 'should be invalid');
+    assert.ok(
+      output.missing.includes('src/missing.js'),
+      `Expected missing to include "src/missing.js": ${JSON.stringify(output.missing)}`
+    );
+  });
+
+  test('detects backtick file paths', () => {
+    fs.writeFileSync(path.join(tmpDir, 'src', 'utils', 'helper.js'), 'module.exports = {};\n');
+    const filePath = path.join(tmpDir, '.planning', 'phases', '01-test', 'doc.md');
+    fs.writeFileSync(filePath, 'See `src/utils/helper.js` for details.\n');
+
+    const result = runGsdTools('verify references .planning/phases/01-test/doc.md', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.ok(output.found >= 1, `Expected at least 1 found, got ${output.found}`);
+  });
+
+  test('skips backtick template expressions', () => {
+    // Template expressions like ${variable} in backtick paths are skipped
+    // @-refs with http are processed but not found on disk
+    const filePath = path.join(tmpDir, '.planning', 'phases', '01-test', 'doc.md');
+    fs.writeFileSync(filePath, '`${variable}/path/file.js`\n');
+
+    const result = runGsdTools('verify references .planning/phases/01-test/doc.md', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    // Template expression is skipped entirely — total should be 0
+    assert.strictEqual(output.total, 0, `Expected total 0 (template skipped): ${JSON.stringify(output)}`);
+  });
+
+  test('returns error for nonexistent file', () => {
+    const result = runGsdTools('verify references .planning/phases/01-test/nonexistent.md', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.ok(output.error, `Expected error field: ${JSON.stringify(output)}`);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// verify commits command
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('verify commits command', () => {
+  let tmpDir;
+
+  beforeEach(() => {
+    tmpDir = createTempGitProject();
+  });
+
+  afterEach(() => {
+    cleanup(tmpDir);
+  });
+
+  test('validates real commit hashes', () => {
+    const hash = execSync('git rev-parse --short HEAD', { cwd: tmpDir, encoding: 'utf-8' }).trim();
+
+    const result = runGsdTools(`verify commits ${hash}`, tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.all_valid, true, `Expected all_valid true: ${JSON.stringify(output)}`);
+    assert.ok(output.valid.includes(hash), `Expected valid to include ${hash}: ${JSON.stringify(output.valid)}`);
+  });
+
+  test('reports invalid for fake hashes', () => {
+    const result = runGsdTools('verify commits abcdef1234567', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.all_valid, false, `Expected all_valid false: ${JSON.stringify(output)}`);
+    assert.ok(
+      output.invalid.includes('abcdef1234567'),
+      `Expected invalid to include "abcdef1234567": ${JSON.stringify(output.invalid)}`
+    );
+  });
+
+  test('handles mixed valid and invalid hashes', () => {
+    const hash = execSync('git rev-parse --short HEAD', { cwd: tmpDir, encoding: 'utf-8' }).trim();
+
+    const result = runGsdTools(`verify commits ${hash} abcdef1234567`, tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.valid.length, 1, `Expected 1 valid: ${JSON.stringify(output)}`);
+    assert.strictEqual(output.invalid.length, 1, `Expected 1 invalid: ${JSON.stringify(output)}`);
+    assert.strictEqual(output.all_valid, false, `Expected all_valid false: ${JSON.stringify(output)}`);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// verify artifacts command
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('verify artifacts command', () => {
+  let tmpDir;
+
+  beforeEach(() => {
+    tmpDir = createTempProject();
+    fs.mkdirSync(path.join(tmpDir, '.planning', 'phases', '01-test'), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, 'src'), { recursive: true });
+  });
+
+  afterEach(() => {
+    cleanup(tmpDir);
+  });
+
+  function writePlanWithArtifacts(tmpDir, artifactsYaml) {
+    // parseMustHavesBlock expects 4-space indent for block name, 6-space for items, 8-space for keys
+    const content = [
+      '---',
+      'phase: 01-test',
+      'plan: 01',
+      'type: execute',
+      'wave: 1',
+      'depends_on: []',
+      'files_modified: [src/app.js]',
+      'autonomous: true',
+      'must_haves:',
+      '    artifacts:',
+      ...artifactsYaml.map(line => `      ${line}`),
+      '---',
+      '',
+      '<tasks>',
+      '<task type="auto">',
+      '  <name>Task 1: Do thing</name>',
+      '  <files>src/app.js</files>',
+      '  <action>Do it</action>',
+      '  <verify><automated>echo ok</automated></verify>',
+      '  <done>Done</done>',
+      '</task>',
+      '</tasks>',
+    ].join('\n');
+    const planPath = path.join(tmpDir, '.planning', 'phases', '01-test', '01-01-PLAN.md');
+    fs.writeFileSync(planPath, content);
+  }
+
+  test('passes when all artifacts exist and match criteria', () => {
+    writePlanWithArtifacts(tmpDir, [
+      '- path: "src/app.js"',
+      '  min_lines: 2',
+      '  contains: "export"',
+    ]);
+    fs.writeFileSync(path.join(tmpDir, 'src', 'app.js'), 'const x = 1;\nexport default x;\nconst y = 2;\n');
+
+    const result = runGsdTools('verify artifacts .planning/phases/01-test/01-01-PLAN.md', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.all_passed, true, `Expected all_passed true: ${JSON.stringify(output)}`);
+  });
+
+  test('reports missing artifact file', () => {
+    writePlanWithArtifacts(tmpDir, [
+      '- path: "src/nonexistent.js"',
+    ]);
+
+    const result = runGsdTools('verify artifacts .planning/phases/01-test/01-01-PLAN.md', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.all_passed, false, 'Expected all_passed false');
+    assert.ok(
+      output.artifacts[0].issues.some(i => i.includes('File not found')),
+      `Expected "File not found" in issues: ${JSON.stringify(output.artifacts[0].issues)}`
+    );
+  });
+
+  test('reports insufficient line count', () => {
+    writePlanWithArtifacts(tmpDir, [
+      '- path: "src/app.js"',
+      '  min_lines: 10',
+    ]);
+    fs.writeFileSync(path.join(tmpDir, 'src', 'app.js'), 'const x = 1;\n');
+
+    const result = runGsdTools('verify artifacts .planning/phases/01-test/01-01-PLAN.md', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.all_passed, false, 'Expected all_passed false');
+    assert.ok(
+      output.artifacts[0].issues.some(i => i.includes('Only') && i.includes('lines, need 10')),
+      `Expected line count issue: ${JSON.stringify(output.artifacts[0].issues)}`
+    );
+  });
+
+  test('reports missing pattern', () => {
+    writePlanWithArtifacts(tmpDir, [
+      '- path: "src/app.js"',
+      '  contains: "module.exports"',
+    ]);
+    fs.writeFileSync(path.join(tmpDir, 'src', 'app.js'), 'const x = 1;\n');
+
+    const result = runGsdTools('verify artifacts .planning/phases/01-test/01-01-PLAN.md', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.all_passed, false, 'Expected all_passed false');
+    assert.ok(
+      output.artifacts[0].issues.some(i => i.includes('Missing pattern')),
+      `Expected "Missing pattern" in issues: ${JSON.stringify(output.artifacts[0].issues)}`
+    );
+  });
+
+  test('reports missing export', () => {
+    writePlanWithArtifacts(tmpDir, [
+      '- path: "src/app.js"',
+      '  exports:',
+      '    - GET',
+    ]);
+    fs.writeFileSync(path.join(tmpDir, 'src', 'app.js'), 'const x = 1;\nexport const POST = () => {};\n');
+
+    const result = runGsdTools('verify artifacts .planning/phases/01-test/01-01-PLAN.md', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.all_passed, false, 'Expected all_passed false');
+    assert.ok(
+      output.artifacts[0].issues.some(i => i.includes('Missing export')),
+      `Expected "Missing export" in issues: ${JSON.stringify(output.artifacts[0].issues)}`
+    );
+  });
+
+  test('returns error when no artifacts in frontmatter', () => {
+    const content = [
+      '---',
+      'phase: 01-test',
+      'plan: 01',
+      'type: execute',
+      'wave: 1',
+      'depends_on: []',
+      'files_modified: [src/app.js]',
+      'autonomous: true',
+      'must_haves:',
+      '  truths:',
+      '    - "something is true"',
+      '---',
+      '',
+      '<tasks></tasks>',
+    ].join('\n');
+    const planPath = path.join(tmpDir, '.planning', 'phases', '01-test', '01-01-PLAN.md');
+    fs.writeFileSync(planPath, content);
+
+    const result = runGsdTools('verify artifacts .planning/phases/01-test/01-01-PLAN.md', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.ok(output.error, `Expected error field: ${JSON.stringify(output)}`);
+    assert.ok(
+      output.error.includes('No must_haves.artifacts'),
+      `Expected "No must_haves.artifacts" in error: ${output.error}`
+    );
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// verify key-links command
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('verify key-links command', () => {
+  let tmpDir;
+
+  beforeEach(() => {
+    tmpDir = createTempProject();
+    fs.mkdirSync(path.join(tmpDir, '.planning', 'phases', '01-test'), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, 'src'), { recursive: true });
+  });
+
+  afterEach(() => {
+    cleanup(tmpDir);
+  });
+
+  function writePlanWithKeyLinks(tmpDir, keyLinksYaml) {
+    // parseMustHavesBlock expects 4-space indent for block name, 6-space for items, 8-space for keys
+    const content = [
+      '---',
+      'phase: 01-test',
+      'plan: 01',
+      'type: execute',
+      'wave: 1',
+      'depends_on: []',
+      'files_modified: [src/a.js]',
+      'autonomous: true',
+      'must_haves:',
+      '    key_links:',
+      ...keyLinksYaml.map(line => `      ${line}`),
+      '---',
+      '',
+      '<tasks>',
+      '<task type="auto">',
+      '  <name>Task 1: Do thing</name>',
+      '  <files>src/a.js</files>',
+      '  <action>Do it</action>',
+      '  <verify><automated>echo ok</automated></verify>',
+      '  <done>Done</done>',
+      '</task>',
+      '</tasks>',
+    ].join('\n');
+    const planPath = path.join(tmpDir, '.planning', 'phases', '01-test', '01-01-PLAN.md');
+    fs.writeFileSync(planPath, content);
+  }
+
+  test('verifies link when pattern found in source', () => {
+    writePlanWithKeyLinks(tmpDir, [
+      '- from: "src/a.js"',
+      '  to: "src/b.js"',
+      '  pattern: "import.*b"',
+    ]);
+    fs.writeFileSync(path.join(tmpDir, 'src', 'a.js'), "import { x } from './b';\n");
+    fs.writeFileSync(path.join(tmpDir, 'src', 'b.js'), 'exports.x = 1;\n');
+
+    const result = runGsdTools('verify key-links .planning/phases/01-test/01-01-PLAN.md', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.all_verified, true, `Expected all_verified true: ${JSON.stringify(output)}`);
+  });
+
+  test('verifies link when pattern found in target', () => {
+    writePlanWithKeyLinks(tmpDir, [
+      '- from: "src/a.js"',
+      '  to: "src/b.js"',
+      '  pattern: "exports\\.targetFunc"',
+    ]);
+    // pattern NOT in source, but found in target
+    fs.writeFileSync(path.join(tmpDir, 'src', 'a.js'), 'const x = 1;\n');
+    fs.writeFileSync(path.join(tmpDir, 'src', 'b.js'), 'exports.targetFunc = () => {};\n');
+
+    const result = runGsdTools('verify key-links .planning/phases/01-test/01-01-PLAN.md', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.all_verified, true, `Expected verified via target: ${JSON.stringify(output)}`);
+    assert.ok(
+      output.links[0].detail.includes('target'),
+      `Expected detail about target: ${output.links[0].detail}`
+    );
+  });
+
+  test('fails when pattern not found in source or target', () => {
+    writePlanWithKeyLinks(tmpDir, [
+      '- from: "src/a.js"',
+      '  to: "src/b.js"',
+      '  pattern: "missingPattern"',
+    ]);
+    fs.writeFileSync(path.join(tmpDir, 'src', 'a.js'), 'const x = 1;\n');
+    fs.writeFileSync(path.join(tmpDir, 'src', 'b.js'), 'const y = 2;\n');
+
+    const result = runGsdTools('verify key-links .planning/phases/01-test/01-01-PLAN.md', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.all_verified, false, `Expected all_verified false: ${JSON.stringify(output)}`);
+    assert.strictEqual(output.links[0].verified, false, 'link should not be verified');
+  });
+
+  test('verifies link without pattern using string inclusion', () => {
+    writePlanWithKeyLinks(tmpDir, [
+      '- from: "src/a.js"',
+      '  to: "src/b.js"',
+    ]);
+    // source file contains the 'to' value as a string
+    fs.writeFileSync(path.join(tmpDir, 'src', 'a.js'), "const b = require('./src/b.js');\n");
+    fs.writeFileSync(path.join(tmpDir, 'src', 'b.js'), 'module.exports = {};\n');
+
+    const result = runGsdTools('verify key-links .planning/phases/01-test/01-01-PLAN.md', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.all_verified, true, `Expected all_verified true: ${JSON.stringify(output)}`);
+    assert.ok(
+      output.links[0].detail.includes('Target referenced in source'),
+      `Expected "Target referenced in source" in detail: ${output.links[0].detail}`
+    );
+  });
+
+  test('reports source file not found', () => {
+    writePlanWithKeyLinks(tmpDir, [
+      '- from: "src/nonexistent.js"',
+      '  to: "src/b.js"',
+      '  pattern: "something"',
+    ]);
+    fs.writeFileSync(path.join(tmpDir, 'src', 'b.js'), 'module.exports = {};\n');
+
+    const result = runGsdTools('verify key-links .planning/phases/01-test/01-01-PLAN.md', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.ok(
+      output.links[0].detail.includes('Source file not found'),
+      `Expected "Source file not found" in detail: ${output.links[0].detail}`
+    );
+  });
+
+  test('returns error when no key_links in frontmatter', () => {
+    const content = [
+      '---',
+      'phase: 01-test',
+      'plan: 01',
+      'type: execute',
+      'wave: 1',
+      'depends_on: []',
+      'files_modified: [src/a.js]',
+      'autonomous: true',
+      'must_haves:',
+      '  truths:',
+      '    - "something is true"',
+      '---',
+      '',
+      '<tasks></tasks>',
+    ].join('\n');
+    const planPath = path.join(tmpDir, '.planning', 'phases', '01-test', '01-01-PLAN.md');
+    fs.writeFileSync(planPath, content);
+
+    const result = runGsdTools('verify key-links .planning/phases/01-test/01-01-PLAN.md', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.ok(output.error, `Expected error field: ${JSON.stringify(output)}`);
+    assert.ok(
+      output.error.includes('No must_haves.key_links'),
+      `Expected "No must_haves.key_links" in error: ${output.error}`
+    );
+  });
+});
