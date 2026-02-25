@@ -1151,9 +1151,10 @@ describe('websearch command', () => {
 
     await cmdWebsearch('node.js testing', { limit: 5, freshness: 'pd' }, false);
 
-    assert.ok(capturedUrl.includes('q=node.js+testing'), 'URL should contain query');
-    assert.ok(capturedUrl.includes('count=5'), 'URL should contain limit');
-    assert.ok(capturedUrl.includes('freshness=pd'), 'URL should contain freshness');
+    const parsed = new URL(capturedUrl);
+    assert.strictEqual(parsed.searchParams.get('q'), 'node.js testing', 'query param should decode to original string');
+    assert.strictEqual(parsed.searchParams.get('count'), '5', 'count param should be 5');
+    assert.strictEqual(parsed.searchParams.get('freshness'), 'pd', 'freshness param should be pd');
   });
 
   test('handles API error (non-200 status)', async () => {

@@ -834,6 +834,7 @@ describe('cmdStateAdvancePlan (state advance-plan)', () => {
   test('advances plan counter when not on last plan', () => {
     fs.writeFileSync(path.join(tmpDir, '.planning', 'STATE.md'), advanceFixture);
 
+    const before = new Date().toISOString().split('T')[0];
     const result = runGsdTools('state advance-plan', tmpDir);
     assert.ok(result.success, `Command failed: ${result.error}`);
 
@@ -846,8 +847,11 @@ describe('cmdStateAdvancePlan (state advance-plan)', () => {
     const updated = fs.readFileSync(path.join(tmpDir, '.planning', 'STATE.md'), 'utf-8');
     assert.ok(updated.includes('**Current Plan:** 2'), 'Current Plan should be updated to 2');
     assert.ok(updated.includes('**Status:** Ready to execute'), 'Status should be Ready to execute');
-    const today = new Date().toISOString().split('T')[0];
-    assert.ok(updated.includes(`**Last Activity:** ${today}`), 'Last Activity should be updated to today');
+    const after = new Date().toISOString().split('T')[0];
+    assert.ok(
+      updated.includes(`**Last Activity:** ${before}`) || updated.includes(`**Last Activity:** ${after}`),
+      `Last Activity should be today (${before}) or next day if midnight boundary (${after})`
+    );
   });
 
   test('marks phase complete on last plan', () => {

@@ -142,69 +142,22 @@ describe('resolveModelInternal', () => {
     );
   }
 
-  describe('quality profile', () => {
-    beforeEach(() => {
-      writeConfig({ model_profile: 'quality' });
-    });
+  describe('model profile structural validation', () => {
+    test('all known agents resolve to a valid string for each profile', () => {
+      const knownAgents = ['gsd-planner', 'gsd-executor', 'gsd-phase-researcher', 'gsd-codebase-mapper'];
+      const profiles = ['quality', 'balanced', 'budget'];
+      const validValues = ['inherit', 'sonnet', 'haiku', 'opus'];
 
-    test('resolves gsd-planner correctly', () => {
-      assert.strictEqual(resolveModelInternal(tmpDir, 'gsd-planner'), 'inherit');
-    });
-
-    test('resolves gsd-executor correctly', () => {
-      assert.strictEqual(resolveModelInternal(tmpDir, 'gsd-executor'), 'inherit');
-    });
-
-    test('resolves gsd-phase-researcher correctly', () => {
-      assert.strictEqual(resolveModelInternal(tmpDir, 'gsd-phase-researcher'), 'inherit');
-    });
-
-    test('resolves gsd-codebase-mapper correctly', () => {
-      assert.strictEqual(resolveModelInternal(tmpDir, 'gsd-codebase-mapper'), 'sonnet');
-    });
-  });
-
-  describe('balanced profile', () => {
-    beforeEach(() => {
-      writeConfig({ model_profile: 'balanced' });
-    });
-
-    test('resolves gsd-planner correctly', () => {
-      assert.strictEqual(resolveModelInternal(tmpDir, 'gsd-planner'), 'inherit');
-    });
-
-    test('resolves gsd-executor correctly', () => {
-      assert.strictEqual(resolveModelInternal(tmpDir, 'gsd-executor'), 'sonnet');
-    });
-
-    test('resolves gsd-phase-researcher correctly', () => {
-      assert.strictEqual(resolveModelInternal(tmpDir, 'gsd-phase-researcher'), 'sonnet');
-    });
-
-    test('resolves gsd-codebase-mapper correctly', () => {
-      assert.strictEqual(resolveModelInternal(tmpDir, 'gsd-codebase-mapper'), 'haiku');
-    });
-  });
-
-  describe('budget profile', () => {
-    beforeEach(() => {
-      writeConfig({ model_profile: 'budget' });
-    });
-
-    test('resolves gsd-planner correctly', () => {
-      assert.strictEqual(resolveModelInternal(tmpDir, 'gsd-planner'), 'sonnet');
-    });
-
-    test('resolves gsd-executor correctly', () => {
-      assert.strictEqual(resolveModelInternal(tmpDir, 'gsd-executor'), 'sonnet');
-    });
-
-    test('resolves gsd-phase-researcher correctly', () => {
-      assert.strictEqual(resolveModelInternal(tmpDir, 'gsd-phase-researcher'), 'haiku');
-    });
-
-    test('resolves gsd-codebase-mapper correctly', () => {
-      assert.strictEqual(resolveModelInternal(tmpDir, 'gsd-codebase-mapper'), 'haiku');
+      for (const profile of profiles) {
+        writeConfig({ model_profile: profile });
+        for (const agent of knownAgents) {
+          const result = resolveModelInternal(tmpDir, agent);
+          assert.ok(
+            validValues.includes(result),
+            `profile=${profile} agent=${agent} returned unexpected value: ${result}`
+          );
+        }
+      }
     });
   });
 

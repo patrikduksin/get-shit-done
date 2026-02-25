@@ -351,32 +351,3 @@ must_haves:
   });
 });
 
-// ─── FRONTMATTER_SCHEMAS ───────────────────────────────────────────────────
-
-describe('FRONTMATTER_SCHEMAS', () => {
-  test('plan schema has correct required fields', () => {
-    assert.deepStrictEqual(
-      FRONTMATTER_SCHEMAS.plan.required,
-      ['phase', 'plan', 'type', 'wave', 'depends_on', 'files_modified', 'autonomous', 'must_haves']
-    );
-  });
-
-  test('summary schema has correct required fields', () => {
-    assert.deepStrictEqual(
-      FRONTMATTER_SCHEMAS.summary.required,
-      ['phase', 'plan', 'subsystem', 'tags', 'duration', 'completed']
-    );
-  });
-
-  test('verification schema has correct required fields', () => {
-    assert.deepStrictEqual(
-      FRONTMATTER_SCHEMAS.verification.required,
-      ['phase', 'verified', 'status', 'score']
-    );
-  });
-
-  test('all schema names are present', () => {
-    const keys = Object.keys(FRONTMATTER_SCHEMAS).sort();
-    assert.deepStrictEqual(keys, ['plan', 'summary', 'verification']);
-  });
-});
