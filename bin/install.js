@@ -1639,12 +1639,15 @@ function finishInstall(settingsPath, settings, statuslineCommand, shouldInstallS
   let program = 'Claude Code';
   if (runtime === 'opencode') program = 'OpenCode';
   if (runtime === 'gemini') program = 'Gemini';
+  if (runtime === 'codex') program = 'Codex';
 
-  const command = isOpencode ? '/gsd-help' : '/gsd:help';
+  let command = '/gsd:new-project';
+  if (runtime === 'opencode') command = '/gsd-new-project';
+  if (runtime === 'codex') command = '$gsd-new-project';
   console.log(`
-  ${green}Done!${reset} Launch ${program} and run ${cyan}${command}${reset}.
+  ${green}Done!${reset} Open a blank directory in ${program} and run ${cyan}${command}${reset}.
 
-  ${cyan}Join the community:${reset} https://discord.gg/5JJgD5svVS
+  ${cyan}Join the community:${reset} https://discord.gg/gsd
 `);
 }
 
