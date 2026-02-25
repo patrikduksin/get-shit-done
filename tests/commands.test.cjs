@@ -967,3 +967,221 @@ describe('resolve-model command', () => {
     assert.ok(result.error.includes('agent-type required'), 'error should mention agent-type required');
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// cmdCommit tests (CMD-04)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('commit command', () => {
+  const { createTempGitProject } = require('./helpers.cjs');
+  const { execSync } = require('child_process');
+  let tmpDir;
+
+  beforeEach(() => {
+    tmpDir = createTempGitProject();
+  });
+
+  afterEach(() => {
+    cleanup(tmpDir);
+  });
+
+  test('skips when commit_docs is false', () => {
+    // Write config with commit_docs: false
+    fs.writeFileSync(
+      path.join(tmpDir, '.planning', 'config.json'),
+      JSON.stringify({ commit_docs: false })
+    );
+
+    const result = runGsdTools('commit "test message"', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.committed, false);
+    assert.strictEqual(output.reason, 'skipped_commit_docs_false');
+  });
+
+  test('skips when .planning is gitignored', () => {
+    // Add .planning/ to .gitignore and commit it so git recognizes the ignore
+    fs.writeFileSync(path.join(tmpDir, '.gitignore'), '.planning/\n');
+    execSync('git add .gitignore', { cwd: tmpDir, stdio: 'pipe' });
+    execSync('git commit -m "add gitignore"', { cwd: tmpDir, stdio: 'pipe' });
+
+    const result = runGsdTools('commit "test message"', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.committed, false);
+    assert.strictEqual(output.reason, 'skipped_gitignored');
+  });
+
+  test('handles nothing to commit', () => {
+    // Don't modify any files after initial commit
+    const result = runGsdTools('commit "test message"', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.committed, false);
+    assert.strictEqual(output.reason, 'nothing_to_commit');
+  });
+
+  test('creates real commit with correct hash', () => {
+    // Create a new file in .planning/
+    fs.writeFileSync(path.join(tmpDir, '.planning', 'test-file.md'), '# Test\n');
+
+    const result = runGsdTools('commit "test: add test file" --files .planning/test-file.md', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.committed, true, 'should have committed');
+    assert.ok(output.hash, 'should have a commit hash');
+    assert.strictEqual(output.reason, 'committed');
+
+    // Verify via git log
+    const gitLog = execSync('git log --oneline -1', { cwd: tmpDir, encoding: 'utf-8' }).trim();
+    assert.ok(gitLog.includes('test: add test file'), 'git log should contain the commit message');
+    assert.ok(gitLog.includes(output.hash), 'git log should contain the returned hash');
+  });
+
+  test('amend mode works without crashing', () => {
+    // Create a file and commit it first
+    fs.writeFileSync(path.join(tmpDir, '.planning', 'amend-file.md'), '# Initial\n');
+    execSync('git add .planning/amend-file.md', { cwd: tmpDir, stdio: 'pipe' });
+    execSync('git commit -m "initial file"', { cwd: tmpDir, stdio: 'pipe' });
+
+    // Modify the file and amend
+    fs.writeFileSync(path.join(tmpDir, '.planning', 'amend-file.md'), '# Amended\n');
+
+    const result = runGsdTools('commit "ignored" --files .planning/amend-file.md --amend', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.committed, true, 'amend should succeed');
+
+    // Verify only 2 commits total (initial setup + amended)
+    const logCount = execSync('git log --oneline', { cwd: tmpDir, encoding: 'utf-8' }).trim().split('\n').length;
+    assert.strictEqual(logCount, 2, 'should have 2 commits (initial + amended)');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// cmdWebsearch tests (CMD-05)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('websearch command', () => {
+  const { cmdWebsearch } = require('../get-shit-done/bin/lib/commands.cjs');
+  let origFetch;
+  let origApiKey;
+  let origStdoutWrite;
+  let captured;
+
+  beforeEach(() => {
+    origFetch = global.fetch;
+    origApiKey = process.env.BRAVE_API_KEY;
+    origStdoutWrite = process.stdout.write;
+    captured = '';
+    process.stdout.write = (chunk) => { captured += chunk; return true; };
+  });
+
+  afterEach(() => {
+    global.fetch = origFetch;
+    if (origApiKey !== undefined) {
+      process.env.BRAVE_API_KEY = origApiKey;
+    } else {
+      delete process.env.BRAVE_API_KEY;
+    }
+    process.stdout.write = origStdoutWrite;
+  });
+
+  test('returns available=false when BRAVE_API_KEY is unset', async () => {
+    delete process.env.BRAVE_API_KEY;
+
+    await cmdWebsearch('test query', {}, false);
+
+    const output = JSON.parse(captured);
+    assert.strictEqual(output.available, false);
+    assert.ok(output.reason.includes('BRAVE_API_KEY'), 'should mention missing API key');
+  });
+
+  test('returns error when no query provided', async () => {
+    process.env.BRAVE_API_KEY = 'test-key';
+
+    await cmdWebsearch(null, {}, false);
+
+    const output = JSON.parse(captured);
+    assert.strictEqual(output.available, false);
+    assert.ok(output.error.includes('Query required'), 'should mention query required');
+  });
+
+  test('returns results for successful API response', async () => {
+    process.env.BRAVE_API_KEY = 'test-key';
+
+    global.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        web: {
+          results: [
+            { title: 'Test Result', url: 'https://example.com', description: 'A test result', age: '1d' },
+          ],
+        },
+      }),
+    });
+
+    await cmdWebsearch('test query', { limit: 5, freshness: 'pd' }, false);
+
+    const output = JSON.parse(captured);
+    assert.strictEqual(output.available, true);
+    assert.strictEqual(output.query, 'test query');
+    assert.strictEqual(output.count, 1);
+    assert.strictEqual(output.results[0].title, 'Test Result');
+    assert.strictEqual(output.results[0].url, 'https://example.com');
+    assert.strictEqual(output.results[0].age, '1d');
+  });
+
+  test('constructs correct URL parameters', async () => {
+    process.env.BRAVE_API_KEY = 'test-key';
+    let capturedUrl = '';
+
+    global.fetch = async (url) => {
+      capturedUrl = url;
+      return {
+        ok: true,
+        json: async () => ({ web: { results: [] } }),
+      };
+    };
+
+    await cmdWebsearch('node.js testing', { limit: 5, freshness: 'pd' }, false);
+
+    assert.ok(capturedUrl.includes('q=node.js+testing'), 'URL should contain query');
+    assert.ok(capturedUrl.includes('count=5'), 'URL should contain limit');
+    assert.ok(capturedUrl.includes('freshness=pd'), 'URL should contain freshness');
+  });
+
+  test('handles API error (non-200 status)', async () => {
+    process.env.BRAVE_API_KEY = 'test-key';
+
+    global.fetch = async () => ({
+      ok: false,
+      status: 429,
+    });
+
+    await cmdWebsearch('test query', {}, false);
+
+    const output = JSON.parse(captured);
+    assert.strictEqual(output.available, false);
+    assert.ok(output.error.includes('429'), 'error should include status code');
+  });
+
+  test('handles network failure', async () => {
+    process.env.BRAVE_API_KEY = 'test-key';
+
+    global.fetch = async () => {
+      throw new Error('Network timeout');
+    };
+
+    await cmdWebsearch('test query', {}, false);
+
+    const output = JSON.parse(captured);
+    assert.strictEqual(output.available, false);
+    assert.strictEqual(output.error, 'Network timeout');
+  });
+});
