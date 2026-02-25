@@ -197,3 +197,186 @@ describe('reconstructFrontmatter', () => {
     assert.deepStrictEqual(extracted2, extracted1, 'round-trip should preserve multiple data types');
   });
 });
+
+// ─── spliceFrontmatter ──────────────────────────────────────────────────────
+
+describe('spliceFrontmatter', () => {
+  test('replaces existing frontmatter preserving body', () => {
+    const content = '---\nphase: 01\ntype: execute\n---\n\n# Body Content\n\nParagraph here.';
+    const newObj = { phase: '02', type: 'tdd', wave: '1' };
+    const result = spliceFrontmatter(content, newObj);
+
+    // New frontmatter should be present
+    const extracted = extractFrontmatter(result);
+    assert.strictEqual(extracted.phase, '02');
+    assert.strictEqual(extracted.type, 'tdd');
+    assert.strictEqual(extracted.wave, '1');
+
+    // Body should be preserved
+    assert.ok(result.includes('# Body Content'), 'body heading should be preserved');
+    assert.ok(result.includes('Paragraph here.'), 'body paragraph should be preserved');
+  });
+
+  test('adds frontmatter to content without any', () => {
+    const content = 'Plain text with no frontmatter.';
+    const newObj = { phase: '01', plan: '01' };
+    const result = spliceFrontmatter(content, newObj);
+
+    // Should start with frontmatter delimiters
+    assert.ok(result.startsWith('---\n'), 'should start with opening delimiter');
+    assert.ok(result.includes('\n---\n'), 'should have closing delimiter');
+
+    // Original content should follow
+    assert.ok(result.includes('Plain text with no frontmatter.'), 'original content should be preserved');
+
+    // Frontmatter should be extractable
+    const extracted = extractFrontmatter(result);
+    assert.strictEqual(extracted.phase, '01');
+    assert.strictEqual(extracted.plan, '01');
+  });
+
+  test('preserves content after frontmatter delimiters exactly', () => {
+    const body = '\n\nExact content with special chars: $, %, &, <, >\nLine 2\nLine 3';
+    const content = '---\nold: value\n---' + body;
+    const newObj = { new: 'value' };
+    const result = spliceFrontmatter(content, newObj);
+
+    // The body after the closing --- should be exactly preserved
+    const closingIdx = result.indexOf('\n---', 4); // skip the opening ---
+    const resultBody = result.slice(closingIdx + 4); // skip \n---
+    assert.strictEqual(resultBody, body, 'body content after frontmatter should be exactly preserved');
+  });
+});
+
+// ─── parseMustHavesBlock ────────────────────────────────────────────────────
+
+describe('parseMustHavesBlock', () => {
+  test('extracts truths as string array', () => {
+    const content = `---
+phase: 01
+must_haves:
+    truths:
+      - "All tests pass on CI"
+      - "Coverage exceeds 80%"
+---
+
+Body content.`;
+    const result = parseMustHavesBlock(content, 'truths');
+    assert.ok(Array.isArray(result), 'should return an array');
+    assert.strictEqual(result.length, 2);
+    assert.strictEqual(result[0], 'All tests pass on CI');
+    assert.strictEqual(result[1], 'Coverage exceeds 80%');
+  });
+
+  test('extracts artifacts as object array', () => {
+    const content = `---
+phase: 01
+must_haves:
+    artifacts:
+      - path: "src/auth.ts"
+        provides: "JWT authentication"
+        min_lines: 100
+      - path: "src/middleware.ts"
+        provides: "Route protection"
+        min_lines: 50
+---
+
+Body.`;
+    const result = parseMustHavesBlock(content, 'artifacts');
+    assert.ok(Array.isArray(result), 'should return an array');
+    assert.strictEqual(result.length, 2);
+    assert.strictEqual(result[0].path, 'src/auth.ts');
+    assert.strictEqual(result[0].provides, 'JWT authentication');
+    assert.strictEqual(result[0].min_lines, 100);
+    assert.strictEqual(result[1].path, 'src/middleware.ts');
+    assert.strictEqual(result[1].min_lines, 50);
+  });
+
+  test('extracts key_links with from/to/via/pattern fields', () => {
+    const content = `---
+phase: 01
+must_haves:
+    key_links:
+      - from: "tests/auth.test.ts"
+        to: "src/auth.ts"
+        via: "import statement"
+        pattern: "import.*auth"
+---
+`;
+    const result = parseMustHavesBlock(content, 'key_links');
+    assert.ok(Array.isArray(result), 'should return an array');
+    assert.strictEqual(result.length, 1);
+    assert.strictEqual(result[0].from, 'tests/auth.test.ts');
+    assert.strictEqual(result[0].to, 'src/auth.ts');
+    assert.strictEqual(result[0].via, 'import statement');
+    assert.strictEqual(result[0].pattern, 'import.*auth');
+  });
+
+  test('returns empty array when block not found', () => {
+    const content = `---
+phase: 01
+must_haves:
+    truths:
+      - "Some truth"
+---
+`;
+    const result = parseMustHavesBlock(content, 'nonexistent_block');
+    assert.deepStrictEqual(result, []);
+  });
+
+  test('returns empty array when no frontmatter', () => {
+    const content = 'Plain text without any frontmatter delimiters.';
+    const result = parseMustHavesBlock(content, 'truths');
+    assert.deepStrictEqual(result, []);
+  });
+
+  test('handles nested arrays within artifact objects', () => {
+    const content = `---
+phase: 01
+must_haves:
+    artifacts:
+      - path: "src/api.ts"
+        provides: "REST endpoints"
+        exports:
+          - "GET"
+          - "POST"
+---
+`;
+    const result = parseMustHavesBlock(content, 'artifacts');
+    assert.ok(Array.isArray(result), 'should return an array');
+    assert.strictEqual(result.length, 1);
+    assert.strictEqual(result[0].path, 'src/api.ts');
+    // The nested array should be captured
+    assert.ok(result[0].exports !== undefined, 'should have exports field');
+  });
+});
+
+// ─── FRONTMATTER_SCHEMAS ───────────────────────────────────────────────────
+
+describe('FRONTMATTER_SCHEMAS', () => {
+  test('plan schema has correct required fields', () => {
+    assert.deepStrictEqual(
+      FRONTMATTER_SCHEMAS.plan.required,
+      ['phase', 'plan', 'type', 'wave', 'depends_on', 'files_modified', 'autonomous', 'must_haves']
+    );
+  });
+
+  test('summary schema has correct required fields', () => {
+    assert.deepStrictEqual(
+      FRONTMATTER_SCHEMAS.summary.required,
+      ['phase', 'plan', 'subsystem', 'tags', 'duration', 'completed']
+    );
+  });
+
+  test('verification schema has correct required fields', () => {
+    assert.deepStrictEqual(
+      FRONTMATTER_SCHEMAS.verification.required,
+      ['phase', 'verified', 'status', 'score']
+    );
+  });
+
+  test('all schema names are present', () => {
+    const keys = Object.keys(FRONTMATTER_SCHEMAS).sort();
+    assert.deepStrictEqual(keys, ['plan', 'summary', 'verification']);
+  });
+});
