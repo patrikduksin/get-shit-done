@@ -503,5 +503,88 @@ describe('STATE.md frontmatter sync', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// stateExtractField and stateReplaceField helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+const { stateExtractField, stateReplaceField } = require('../get-shit-done/bin/lib/state.cjs');
+
+describe('stateExtractField and stateReplaceField helpers', () => {
+  // stateExtractField tests
+
+  test('extracts simple field value', () => {
+    const content = '# State\n\n**Status:** In progress\n';
+    const result = stateExtractField(content, 'Status');
+    assert.strictEqual(result, 'In progress', 'should extract simple field value');
+  });
+
+  test('extracts field with colon in value', () => {
+    const content = '# State\n\n**Last Activity:** 2024-01-15 — Completed plan\n';
+    const result = stateExtractField(content, 'Last Activity');
+    assert.strictEqual(result, '2024-01-15 — Completed plan', 'should return full value after field pattern');
+  });
+
+  test('returns null for missing field', () => {
+    const content = '# State\n\n**Phase:** 03\n';
+    const result = stateExtractField(content, 'Status');
+    assert.strictEqual(result, null, 'should return null when field not present');
+  });
+
+  test('is case-insensitive on field name', () => {
+    const content = '# State\n\n**status:** Active\n';
+    const result = stateExtractField(content, 'Status');
+    assert.strictEqual(result, 'Active', 'should match field name case-insensitively');
+  });
+
+  // stateReplaceField tests
+
+  test('replaces field value', () => {
+    const content = '# State\n\n**Status:** Old\n';
+    const result = stateReplaceField(content, 'Status', 'New');
+    assert.ok(result !== null, 'should return updated content, not null');
+    assert.ok(result.includes('**Status:** New'), 'output should contain updated field value');
+    assert.ok(!result.includes('**Status:** Old'), 'output should not contain old field value');
+  });
+
+  test('returns null when field not found', () => {
+    const content = '# State\n\n**Phase:** 03\n';
+    const result = stateReplaceField(content, 'Status', 'New');
+    assert.strictEqual(result, null, 'should return null when field not present');
+  });
+
+  test('preserves surrounding content', () => {
+    const content = [
+      '# Project State',
+      '',
+      '**Phase:** 03',
+      '**Status:** Old',
+      '**Last Activity:** 2024-01-15',
+      '',
+      '## Notes',
+      'Some notes here.',
+    ].join('\n');
+
+    const result = stateReplaceField(content, 'Status', 'New');
+    assert.ok(result !== null, 'should return updated content');
+    assert.ok(result.includes('**Phase:** 03'), 'Phase line should be unchanged');
+    assert.ok(result.includes('**Status:** New'), 'Status should be updated');
+    assert.ok(result.includes('**Last Activity:** 2024-01-15'), 'Last Activity line should be unchanged');
+    assert.ok(result.includes('## Notes'), 'Notes heading should be unchanged');
+    assert.ok(result.includes('Some notes here.'), 'Notes content should be unchanged');
+  });
+
+  test('round-trip: extract then replace then extract', () => {
+    const content = '# State\n\n**Phase:** 3\n';
+    const extracted = stateExtractField(content, 'Phase');
+    assert.strictEqual(extracted, '3', 'initial extract should return "3"');
+
+    const updated = stateReplaceField(content, 'Phase', '4');
+    assert.ok(updated !== null, 'replace should succeed');
+
+    const reExtracted = stateExtractField(updated, 'Phase');
+    assert.strictEqual(reExtracted, '4', 'extract after replace should return "4"');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // summary-extract command
 // ─────────────────────────────────────────────────────────────────────────────
