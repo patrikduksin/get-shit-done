@@ -2,20 +2,35 @@
  * GSD Tools Test Helpers
  */
 
-const { execSync } = require('child_process');
+const { execSync, execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
 const TOOLS_PATH = path.join(__dirname, '..', 'get-shit-done', 'bin', 'gsd-tools.cjs');
 
-// Helper to run gsd-tools command
+/**
+ * Run gsd-tools command.
+ *
+ * @param {string|string[]} args - Command string (shell-interpreted) or array
+ *   of arguments (shell-bypassed via execFileSync, safe for JSON and dollar signs).
+ * @param {string} cwd - Working directory.
+ */
 function runGsdTools(args, cwd = process.cwd()) {
   try {
-    const result = execSync(`node "${TOOLS_PATH}" ${args}`, {
-      cwd,
-      encoding: 'utf-8',
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
+    let result;
+    if (Array.isArray(args)) {
+      result = execFileSync(process.execPath, [TOOLS_PATH, ...args], {
+        cwd,
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+    } else {
+      result = execSync(`node "${TOOLS_PATH}" ${args}`, {
+        cwd,
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+    }
     return { success: true, output: result.trim() };
   } catch (err) {
     return {

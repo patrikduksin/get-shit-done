@@ -6,6 +6,13 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
+// ─── Path helpers ────────────────────────────────────────────────────────────
+
+/** Normalize a relative path to always use forward slashes (cross-platform). */
+function toPosixPath(p) {
+  return p.split(path.sep).join('/');
+}
+
 // ─── Model Profile Table ─────────────────────────────────────────────────────
 
 const MODEL_PROFILES = {
@@ -218,7 +225,7 @@ function searchPhaseInDir(baseDir, relBase, normalized) {
 
     return {
       found: true,
-      directory: path.join(relBase, match),
+      directory: toPosixPath(path.join(relBase, match)),
       phase_number: phaseNumber,
       phase_name: phaseName,
       phase_slug: phaseName ? phaseName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') : null,
@@ -241,7 +248,7 @@ function findPhaseInternal(cwd, phase) {
   const normalized = normalizePhaseName(phase);
 
   // Search current phases first
-  const current = searchPhaseInDir(phasesDir, path.join('.planning', 'phases'), normalized);
+  const current = searchPhaseInDir(phasesDir, '.planning/phases', normalized);
   if (current) return current;
 
   // Search archived milestone phases (newest first)
@@ -259,7 +266,7 @@ function findPhaseInternal(cwd, phase) {
     for (const archiveName of archiveDirs) {
       const version = archiveName.match(/^(v[\d.]+)-phases$/)[1];
       const archivePath = path.join(milestonesDir, archiveName);
-      const relBase = path.join('.planning', 'milestones', archiveName);
+      const relBase = '.planning/milestones/' + archiveName;
       const result = searchPhaseInDir(archivePath, relBase, normalized);
       if (result) {
         result.archived = version;
@@ -419,4 +426,5 @@ module.exports = {
   pathExistsInternal,
   generateSlugInternal,
   getMilestoneInfo,
+  toPosixPath,
 };

@@ -107,7 +107,7 @@ describe('frontmatter set', () => {
 
   test('handles JSON array value', () => {
     const file = writeTempFile('---\nphase: 01\n---\nbody');
-    const result = runGsdTools(`frontmatter set ${file} --field tags --value '["a","b"]'`);
+    const result = runGsdTools(['frontmatter', 'set', file, '--field', 'tags', '--value', '["a","b"]']);
     assert.ok(result.success, `Command failed: ${result.error}`);
 
     const content = fs.readFileSync(file, 'utf-8');
@@ -140,7 +140,7 @@ describe('frontmatter set', () => {
 describe('frontmatter merge', () => {
   test('merges multiple fields into frontmatter', () => {
     const file = writeTempFile('---\nphase: 01\n---\nbody');
-    const result = runGsdTools(`frontmatter merge ${file} --data '{"plan":"02","type":"tdd"}'`);
+    const result = runGsdTools(['frontmatter', 'merge', file, '--data', '{"plan":"02","type":"tdd"}']);
     assert.ok(result.success, `Command failed: ${result.error}`);
 
     const content = fs.readFileSync(file, 'utf-8');
@@ -153,7 +153,7 @@ describe('frontmatter merge', () => {
 
   test('overwrites existing fields on conflict', () => {
     const file = writeTempFile('---\nphase: 01\ntype: execute\n---\nbody');
-    const result = runGsdTools(`frontmatter merge ${file} --data '{"phase":"02"}'`);
+    const result = runGsdTools(['frontmatter', 'merge', file, '--data', '{"phase":"02"}']);
     assert.ok(result.success, `Command failed: ${result.error}`);
 
     const content = fs.readFileSync(file, 'utf-8');
