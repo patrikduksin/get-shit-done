@@ -270,97 +270,11 @@ Execute each wave in sequence. Autonomous plans within a wave run in parallel **
 
    Before spawning, read file contents. The `@` syntax does not work across Task() boundaries - content must be inlined.
 
-<<<<<<< HEAD
    ```bash
    # Read each plan in the wave
    PLAN_CONTENT=$(cat "{plan_path}")
    STATE_CONTENT=$(cat .planning/STATE.md)
    CONFIG_CONTENT=$(cat .planning/config.json 2>/dev/null)
-||||||| parent of 270b6c4 (fix(#672): add project skill discovery to subagent spawn points)
-   ```
-   Task(
-     subagent_type="gsd-executor",
-     model="{executor_model}",
-     prompt="
-       <objective>
-       Execute plan {plan_number} of phase {phase_number}-{phase_name}.
-       Commit each task atomically. Create SUMMARY.md. Update STATE.md and ROADMAP.md.
-       </objective>
-
-       <execution_context>
-       @~/.claude/get-shit-done/workflows/execute-plan.md
-       @~/.claude/get-shit-done/templates/summary.md
-       @~/.claude/get-shit-done/references/checkpoints.md
-       @~/.claude/get-shit-done/references/tdd.md
-       </execution_context>
-
-       <files_to_read>
-       Read these files at execution start using the Read tool:
-<<<<<<< HEAD
-       - Plan: {phase_dir}/{plan_file}
-       - State: .planning/STATE.md
-       - Config: .planning/config.json (if exists)
-||||||| parent of eb1388c (fix: support both `.claude/skills/` and `.agents/skills/` for skill discovery (#759))
-       - {phase_dir}/{plan_file} (Plan)
-       - .planning/STATE.md (State)
-       - .planning/config.json (Config, if exists)
-       - ./CLAUDE.md (Project instructions, if exists — follow project-specific guidelines and coding conventions)
-       - .agents/skills/ (Project skills, if exists — list skills, read SKILL.md for each, follow relevant rules during implementation)
-=======
-       - {phase_dir}/{plan_file} (Plan)
-       - .planning/STATE.md (State)
-       - .planning/config.json (Config, if exists)
-       - ./CLAUDE.md (Project instructions, if exists — follow project-specific guidelines and coding conventions)
-       - .claude/skills/ or .agents/skills/ (Project skills, if either exists — list skills, read SKILL.md for each, follow relevant rules during implementation)
->>>>>>> eb1388c (fix: support both `.claude/skills/` and `.agents/skills/` for skill discovery (#759))
-       </files_to_read>
-
-       <success_criteria>
-       - [ ] All tasks executed
-       - [ ] Each task committed individually
-       - [ ] SUMMARY.md created in plan directory
-       - [ ] STATE.md updated with position and decisions
-       - [ ] ROADMAP.md updated with plan progress (via `roadmap update-plan-progress`)
-       </success_criteria>
-     "
-   )
-=======
-   ```
-   Task(
-     subagent_type="gsd-executor",
-     model="{executor_model}",
-     prompt="
-       <objective>
-       Execute plan {plan_number} of phase {phase_number}-{phase_name}.
-       Commit each task atomically. Create SUMMARY.md. Update STATE.md and ROADMAP.md.
-       </objective>
-
-       <execution_context>
-       @~/.claude/get-shit-done/workflows/execute-plan.md
-       @~/.claude/get-shit-done/templates/summary.md
-       @~/.claude/get-shit-done/references/checkpoints.md
-       @~/.claude/get-shit-done/references/tdd.md
-       </execution_context>
-
-       <files_to_read>
-       Read these files at execution start using the Read tool:
-       - Plan: {phase_dir}/{plan_file}
-       - State: .planning/STATE.md
-       - Config: .planning/config.json (if exists)
-       - Project instructions: ./CLAUDE.md (if exists — follow project-specific guidelines and coding conventions)
-       - Project skills: .agents/skills/ (if exists — list skills, read SKILL.md for each, follow relevant rules during implementation)
-       </files_to_read>
-
-       <success_criteria>
-       - [ ] All tasks executed
-       - [ ] Each task committed individually
-       - [ ] SUMMARY.md created in plan directory
-       - [ ] STATE.md updated with position and decisions
-       - [ ] ROADMAP.md updated with plan progress (via `roadmap update-plan-progress`)
-       </success_criteria>
-     "
-   )
->>>>>>> 270b6c4 (fix(#672): add project skill discovery to subagent spawn points)
    ```
 
    **If `PARALLELIZATION=true` (default):** Use Task tool with multiple parallel calls.
@@ -592,7 +506,7 @@ After all waves complete, aggregate results:
 Verify phase achieved its GOAL, not just completed its TASKS.
 
 ```bash
-PHASE_REQ_IDS=$(node ~/.claude/get-shit-done/bin/gsd-tools.cjs roadmap get-phase "${PADDED_PHASE}" | jq -r '.section' | grep -i "Requirements:" | sed 's/.*Requirements:\*\*\s*//' | sed 's/[\[\]]//g')
+PHASE_REQ_IDS=$(node "/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PADDED_PHASE}" | jq -r '.section' | grep -i "Requirements:" | sed 's/.*Requirements:\*\*\s*//' | sed 's/[\[\]]//g')
 ```
 
 **Spawn verifier:**
@@ -698,7 +612,7 @@ User stays in control at each decision point.
 Update ROADMAP.md to reflect phase completion using deterministic plan progress from disk:
 
 ```bash
-node ~/.claude/get-shit-done/bin/gsd-tools.cjs roadmap update-plan-progress "${PADDED_PHASE}"
+node "/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap update-plan-progress "${PADDED_PHASE}"
 ```
 
 This counts PLAN vs SUMMARY files directly and updates the roadmap progress table row.

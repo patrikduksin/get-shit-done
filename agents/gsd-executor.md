@@ -813,10 +813,10 @@ Resume file: [path to .continue-here if exists, else "None"]
 
 ```bash
 # Keep roadmap plan counts/status synced from disk
-node ~/.claude/get-shit-done/bin/gsd-tools.cjs roadmap update-plan-progress "${PHASE_NUMBER}"
+node "/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap update-plan-progress "${PHASE_NUMBER}"
 
 # Mark requirement IDs from PLAN frontmatter as complete (if present)
-node ~/.claude/get-shit-done/bin/gsd-tools.cjs requirements mark-complete ${REQ_IDS}
+node "/.claude/get-shit-done/bin/gsd-tools.cjs" requirements mark-complete ${REQ_IDS}
 ```
 
 Extract `REQ_IDS` from plan frontmatter `requirements:`. If no requirement IDs exist, skip marking.
