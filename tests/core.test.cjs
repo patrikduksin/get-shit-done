@@ -398,6 +398,80 @@ describe('getMilestoneInfo', () => {
     assert.strictEqual(info.version, 'v1.0');
     assert.strictEqual(info.name, 'milestone');
   });
+
+  test('returns active milestone when shipped milestone is collapsed in details block', () => {
+    const roadmap = [
+      '# Milestones',
+      '',
+      '| Version | Status |',
+      '|---------|--------|',
+      '| v0.1    | Shipped |',
+      '| v0.2    | Active |',
+      '',
+      '<details>',
+      '<summary>v0.1 — Legacy Feature Parity (Shipped)</summary>',
+      '',
+      '## Roadmap v0.1: Legacy Feature Parity',
+      '',
+      '### Phase 1: Core Setup',
+      'Some content about phase 1',
+      '',
+      '</details>',
+      '',
+      '## Roadmap v0.2: Dashboard Overhaul',
+      '',
+      '### Phase 8: New Dashboard Layout',
+      'Some content about phase 8',
+    ].join('\n');
+    fs.writeFileSync(path.join(tmpDir, '.planning', 'ROADMAP.md'), roadmap);
+    const info = getMilestoneInfo(tmpDir);
+    assert.strictEqual(info.version, 'v0.2');
+    assert.strictEqual(info.name, 'Dashboard Overhaul');
+  });
+
+  test('returns active milestone when multiple shipped milestones exist in details blocks', () => {
+    const roadmap = [
+      '# Milestones',
+      '',
+      '| Version | Status |',
+      '|---------|--------|',
+      '| v0.1    | Shipped |',
+      '| v0.2    | Shipped |',
+      '| v0.3    | Active |',
+      '',
+      '<details>',
+      '<summary>v0.1 — Initial Release (Shipped)</summary>',
+      '',
+      '## Roadmap v0.1: Initial Release',
+      '',
+      '</details>',
+      '',
+      '<details>',
+      '<summary>v0.2 — Feature Expansion (Shipped)</summary>',
+      '',
+      '## Roadmap v0.2: Feature Expansion',
+      '',
+      '</details>',
+      '',
+      '## Roadmap v0.3: Performance Tuning',
+      '',
+      '### Phase 12: Optimize Queries',
+    ].join('\n');
+    fs.writeFileSync(path.join(tmpDir, '.planning', 'ROADMAP.md'), roadmap);
+    const info = getMilestoneInfo(tmpDir);
+    assert.strictEqual(info.version, 'v0.3');
+    assert.strictEqual(info.name, 'Performance Tuning');
+  });
+
+  test('returns defaults when roadmap has no heading matches', () => {
+    fs.writeFileSync(
+      path.join(tmpDir, '.planning', 'ROADMAP.md'),
+      '# Roadmap\n\nSome content without version headings'
+    );
+    const info = getMilestoneInfo(tmpDir);
+    assert.strictEqual(info.version, 'v1.0');
+    assert.strictEqual(info.name, 'milestone');
+  });
 });
 
 // ─── searchPhaseInDir ──────────────────────────────────────────────────────────
