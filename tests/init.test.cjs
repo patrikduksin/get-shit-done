@@ -256,7 +256,7 @@ describe('cmdInitTodos', () => {
     assert.strictEqual(task1.title, 'Fix bug');
     assert.strictEqual(task1.area, 'backend');
     assert.strictEqual(task1.created, '2026-02-25');
-    assert.strictEqual(task1.path, path.join('.planning', 'todos', 'pending', 'task-1.md'));
+    assert.strictEqual(task1.path, '.planning/todos/pending/task-1.md');
   });
 
   test('area filter returns only matching todos', () => {
