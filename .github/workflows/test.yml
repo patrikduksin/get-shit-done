@@ -25,10 +25,10 @@ jobs:
         node-version: [18, 20, 22]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Set up Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
@@ -36,15 +36,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests
-        if: github.event_name != 'pull_request'
-        run: npm test
-
       - name: Run tests with coverage
         # c8 v11 requires Node 20+ (engines: ^20.0.0 || >=22.0.0). Node 18 EOL April 2025.
-        if: github.event_name == 'pull_request' && matrix.node-version != 18
+        if: matrix.node-version != 18
         run: npm run test:coverage
 
       - name: Run tests (Node 18, coverage not supported)
-        if: github.event_name == 'pull_request' && matrix.node-version == 18
+        if: matrix.node-version == 18
         run: npm test
