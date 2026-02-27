@@ -69,7 +69,7 @@ describe('milestone complete command', () => {
     assert.ok(milestones.includes('Set up project infrastructure'), 'accomplishments should be listed');
   });
 
-  test('appends to existing MILESTONES.md', () => {
+  test('prepends to existing MILESTONES.md (reverse chronological)', () => {
     fs.writeFileSync(
       path.join(tmpDir, '.planning', 'MILESTONES.md'),
       `# Milestones\n\n## v0.9 Alpha (Shipped: 2025-01-01)\n\n---\n\n`
@@ -88,7 +88,51 @@ describe('milestone complete command', () => {
 
     const milestones = fs.readFileSync(path.join(tmpDir, '.planning', 'MILESTONES.md'), 'utf-8');
     assert.ok(milestones.includes('v0.9 Alpha'), 'existing entry should be preserved');
-    assert.ok(milestones.includes('v1.0 Beta'), 'new entry should be appended');
+    assert.ok(milestones.includes('v1.0 Beta'), 'new entry should be present');
+    // New entry should appear BEFORE old entry (reverse chronological)
+    const newIdx = milestones.indexOf('v1.0 Beta');
+    const oldIdx = milestones.indexOf('v0.9 Alpha');
+    assert.ok(newIdx < oldIdx, 'new entry should appear before old entry (reverse chronological)');
+  });
+
+  test('three sequential completions maintain reverse-chronological order', () => {
+    fs.writeFileSync(
+      path.join(tmpDir, '.planning', 'MILESTONES.md'),
+      `# Milestones\n\n## v1.0 First (Shipped: 2025-01-01)\n\n---\n\n`
+    );
+    fs.writeFileSync(
+      path.join(tmpDir, '.planning', 'ROADMAP.md'),
+      `# Roadmap v1.1\n`
+    );
+    fs.writeFileSync(
+      path.join(tmpDir, '.planning', 'STATE.md'),
+      `# State\n\n**Status:** In progress\n**Last Activity:** 2025-01-01\n**Last Activity Description:** Working\n`
+    );
+
+    let result = runGsdTools('milestone complete v1.1 --name Second', tmpDir);
+    assert.ok(result.success, `v1.1 failed: ${result.error}`);
+
+    fs.writeFileSync(
+      path.join(tmpDir, '.planning', 'ROADMAP.md'),
+      `# Roadmap v1.2\n`
+    );
+
+    result = runGsdTools('milestone complete v1.2 --name Third', tmpDir);
+    assert.ok(result.success, `v1.2 failed: ${result.error}`);
+
+    const milestones = fs.readFileSync(
+      path.join(tmpDir, '.planning', 'MILESTONES.md'), 'utf-8'
+    );
+
+    const idx10 = milestones.indexOf('v1.0 First');
+    const idx11 = milestones.indexOf('v1.1 Second');
+    const idx12 = milestones.indexOf('v1.2 Third');
+
+    assert.ok(idx10 !== -1, 'v1.0 should be present');
+    assert.ok(idx11 !== -1, 'v1.1 should be present');
+    assert.ok(idx12 !== -1, 'v1.2 should be present');
+    assert.ok(idx12 < idx11, 'v1.2 should appear before v1.1');
+    assert.ok(idx11 < idx10, 'v1.1 should appear before v1.0');
   });
 
   test('archives phase directories with --archive-phases flag', () => {

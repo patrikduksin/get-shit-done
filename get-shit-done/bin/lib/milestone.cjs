@@ -189,7 +189,16 @@ function cmdMilestoneComplete(cwd, version, options, raw) {
 
   if (fs.existsSync(milestonesPath)) {
     const existing = fs.readFileSync(milestonesPath, 'utf-8');
-    fs.writeFileSync(milestonesPath, existing + '\n' + milestoneEntry, 'utf-8');
+    // Insert after the header line(s) for reverse chronological order (newest first)
+    const headerMatch = existing.match(/^(#{1,3}\s+[^\n]*\n\n?)/);
+    if (headerMatch) {
+      const header = headerMatch[1];
+      const rest = existing.slice(header.length);
+      fs.writeFileSync(milestonesPath, header + milestoneEntry + rest, 'utf-8');
+    } else {
+      // No recognizable header — prepend the entry
+      fs.writeFileSync(milestonesPath, milestoneEntry + existing, 'utf-8');
+    }
   } else {
     fs.writeFileSync(milestonesPath, `# Milestones\n\n${milestoneEntry}`, 'utf-8');
   }
