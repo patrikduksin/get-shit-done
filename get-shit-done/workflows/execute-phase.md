@@ -296,9 +296,23 @@ Execute each wave in sequence. Autonomous plans within a wave run in parallel **
 
        <files_to_read>
        Read these files at execution start using the Read tool:
+<<<<<<< HEAD
        - Plan: {phase_dir}/{plan_file}
        - State: .planning/STATE.md
        - Config: .planning/config.json (if exists)
+||||||| parent of eb1388c (fix: support both `.claude/skills/` and `.agents/skills/` for skill discovery (#759))
+       - {phase_dir}/{plan_file} (Plan)
+       - .planning/STATE.md (State)
+       - .planning/config.json (Config, if exists)
+       - ./CLAUDE.md (Project instructions, if exists — follow project-specific guidelines and coding conventions)
+       - .agents/skills/ (Project skills, if exists — list skills, read SKILL.md for each, follow relevant rules during implementation)
+=======
+       - {phase_dir}/{plan_file} (Plan)
+       - .planning/STATE.md (State)
+       - .planning/config.json (Config, if exists)
+       - ./CLAUDE.md (Project instructions, if exists — follow project-specific guidelines and coding conventions)
+       - .claude/skills/ or .agents/skills/ (Project skills, if either exists — list skills, read SKILL.md for each, follow relevant rules during implementation)
+>>>>>>> eb1388c (fix: support both `.claude/skills/` and `.agents/skills/` for skill discovery (#759))
        </files_to_read>
 
        <success_criteria>
@@ -380,7 +394,7 @@ Execute each wave in sequence. Autonomous plans within a wave run in parallel **
    {config_content}
 
    Project skills:
-   If `.agents/skills/` exists, list available skills, read each `SKILL.md` index, and load only relevant rule files while implementing tasks.
+   If `.claude/skills/` or `.agents/skills/` exists, list available skills, read each `SKILL.md` index, and load only relevant rule files while implementing tasks.
    </context>
 
    <success_criteria>
