@@ -54,6 +54,7 @@ function cmdConfigEnsureSection(cwd, raw) {
       research: true,
       plan_check: true,
       verifier: true,
+      nyquist_validation: false,
     },
     parallelization: true,
     brave_search: hasBraveSearch,
