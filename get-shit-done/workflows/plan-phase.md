@@ -309,6 +309,8 @@ Output consumed by /gsd:execute-phase. Plans need:
 </downstream_consumer>
 
 <quality_gate>
+- [ ] High-impact technical choices surfaced to user via QUESTIONS_PENDING
+- [ ] User decisions incorporated before final plan write
 - [ ] PLAN.md files created in phase directory
 - [ ] Each plan has valid frontmatter
 - [ ] Tasks are specific and actionable
@@ -332,6 +334,21 @@ Task(
 - **`## PLANNING COMPLETE`:** Display plan count. If `--skip-verify` or `plan_checker_enabled` is false (from init): skip to step 13. Otherwise: step 10.
 - **`## CHECKPOINT REACHED`:** Present to user, get response, spawn continuation (step 12)
 - **`## PLANNING INCONCLUSIVE`:** Show attempts, offer: Add context / Retry / Manual
+- **`## QUESTIONS_PENDING`:** Go to step 9a.
+
+## 9a. Resolve Planner Questions (QUESTIONS_PENDING loop)
+
+If planner returns `## QUESTIONS_PENDING`:
+
+1. Parse `<questions>` and `<analysis_state>` from planner output.
+2. Convert the listed questions into AskUserQuestion calls.
+3. Collect user answers.
+4. Spawn planner continuation with:
+   - stage
+   - prior analysis_state
+   - user decisions
+5. Loop this step while planner keeps returning `## QUESTIONS_PENDING`.
+6. Exit loop when planner returns `## PLANNING COMPLETE` and continue to step 10.
 
 ## 10. Spawn gsd-plan-checker Agent
 
@@ -367,6 +384,8 @@ Checker prompt:
 
 <expected_output>
 - ## VERIFICATION PASSED — all checks pass
+- ## VERIFICATION PASSED (USER OVERRIDE) — user accepted risks
+- ## QUESTIONS_PENDING — checker needs user decision
 - ## ISSUES FOUND — structured issue list
 </expected_output>
 ```
@@ -383,7 +402,21 @@ Task(
 ## 11. Handle Checker Return
 
 - **`## VERIFICATION PASSED`:** Display confirmation, proceed to step 13.
+- **`## VERIFICATION PASSED (USER OVERRIDE)`:** Display accepted risks and proceed to step 13.
+- **`## QUESTIONS_PENDING`:** Resolve checker critique decision in step 11a.
 - **`## ISSUES FOUND`:** Display issues, check iteration count, proceed to step 12.
+
+## 11a. Resolve Checker Questions (QUESTIONS_PENDING loop)
+
+If checker returns `## QUESTIONS_PENDING`:
+
+1. Ask user the critique decision question(s) via AskUserQuestion.
+2. If user chooses proceed:
+   - Treat outcome as `## VERIFICATION PASSED (USER OVERRIDE)`
+   - Continue to step 13.
+3. If user chooses revision:
+   - Convert checker critique into structured `## ISSUES FOUND`
+   - Continue to step 12 revision loop.
 
 ## 12. Revision Loop (Max 3 Iterations)
 
