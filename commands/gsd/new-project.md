@@ -1,6 +1,6 @@
 ---
 name: gsd:new-project
-description: Initialize a new project with deep context gathering and PROJECT.md
+description: Initialize project context and PROJECT.md (interactive split flow + auto end-to-end mode)
 argument-hint: "[--auto]"
 allowed-tools:
   - Read
@@ -11,21 +11,22 @@ allowed-tools:
 ---
 <context>
 **Flags:**
-- `--auto` — Automatic mode. After config questions, runs research → requirements → roadmap without further interaction. Expects idea document via @ reference.
+- `--auto` — Unattended setup mode. Runs full initialization sequence (project capture + roadmap stages) without interactive phase handoff.
 </context>
 
 <objective>
-Initialize a new project through unified flow: questioning → research (optional) → requirements → roadmap.
+Initialize a new project.
 
-**Creates:**
-- `.planning/PROJECT.md` — project context
-- `.planning/config.json` — workflow preferences
-- `.planning/research/` — domain research (optional)
-- `.planning/REQUIREMENTS.md` — scoped requirements
-- `.planning/ROADMAP.md` — phase structure
-- `.planning/STATE.md` — project memory
+**Interactive mode (default):**
+- Deep questioning and context capture
+- Creates `.planning/PROJECT.md`
+- Stops intentionally so you can context-reset before roadmap work
 
-**After this command:** Run `/gsd:plan-phase 1` to start execution.
+**Auto mode (`--auto`):**
+- Runs full end-to-end initialization sequence
+- Creates `PROJECT.md`, `config.json`, optional `research/`, `REQUIREMENTS.md`, `ROADMAP.md`, `STATE.md`
+
+**After interactive command:** Run `/gsd:init-roadmap`.
 </objective>
 
 <execution_context>

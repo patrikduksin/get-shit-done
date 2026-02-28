@@ -1,5 +1,7 @@
 <purpose>
-Initialize a new project through unified flow: questioning, research (optional), requirements, roadmap. This is the most leveraged moment in any project — deep questioning here means better plans, better execution, better outcomes. One workflow takes you from idea to ready-for-planning.
+Initialize a new project with split-flow behavior:
+- Interactive mode: capture context and write PROJECT.md, then hand off to `/gsd:init-roadmap`
+- Auto mode (`--auto`): continue end-to-end through config, research, requirements, and roadmap
 </purpose>
 
 <required_reading>
@@ -342,6 +344,27 @@ node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs: initialize pr
 ```
 
 ## 5. Workflow Preferences
+
+**Interactive split flow (default):**
+
+If auto mode is NOT active, stop here intentionally to preserve a context reset point.
+
+Display:
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ GSD ► PROJECT CONTEXT CAPTURED ✓
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PROJECT.md is ready.
+
+Next command:
+/gsd:init-roadmap
+
+This second stage handles config, research, requirements, and roadmap.
+Run `/clear` first for a fresh context window.
+```
+
+Exit workflow.
 
 **If auto mode:** Skip — config was collected in Step 2a. Proceed to Step 5.5.
 
@@ -1077,6 +1100,10 @@ Exit skill and invoke SlashCommand("/gsd:discuss-phase 1 --auto")
 
 <output>
 
+**Interactive mode (default):**
+- `.planning/PROJECT.md`
+
+**Auto mode (`--auto`):**
 - `.planning/PROJECT.md`
 - `.planning/config.json`
 - `.planning/research/` (if research selected)
@@ -1098,18 +1125,19 @@ Exit skill and invoke SlashCommand("/gsd:discuss-phase 1 --auto")
 - [ ] Brownfield detection completed
 - [ ] Deep questioning completed (threads followed, not rushed)
 - [ ] PROJECT.md captures full context → **committed**
-- [ ] config.json has workflow mode, depth, parallelization → **committed**
-- [ ] Research completed (if selected) — 4 parallel agents spawned → **committed**
-- [ ] Requirements gathered (from research or conversation)
-- [ ] User scoped each category (v1/v2/out of scope)
-- [ ] REQUIREMENTS.md created with REQ-IDs → **committed**
-- [ ] gsd-roadmapper spawned with context
-- [ ] Roadmap files written immediately (not draft)
-- [ ] User feedback incorporated (if any)
-- [ ] ROADMAP.md created with phases, requirement mappings, success criteria
-- [ ] STATE.md initialized
-- [ ] REQUIREMENTS.md traceability updated
-- [ ] User knows next step is `/gsd:discuss-phase 1`
+- [ ] Interactive mode: user knows next step is `/gsd:init-roadmap` and workflow exits after PROJECT.md
+- [ ] Auto mode: config.json has workflow mode, depth, parallelization → **committed**
+- [ ] Auto mode: Research completed (if selected) — 4 parallel agents spawned → **committed**
+- [ ] Auto mode: Requirements gathered (from research or conversation)
+- [ ] Auto mode: User scoped each category (v1/v2/out of scope) or auto defaults applied
+- [ ] Auto mode: REQUIREMENTS.md created with REQ-IDs → **committed**
+- [ ] Auto mode: gsd-roadmapper spawned with context
+- [ ] Auto mode: Roadmap files written immediately (not draft)
+- [ ] Auto mode: User feedback incorporated (if any)
+- [ ] Auto mode: ROADMAP.md created with phases, requirement mappings, success criteria
+- [ ] Auto mode: STATE.md initialized
+- [ ] Auto mode: REQUIREMENTS.md traceability updated
+- [ ] Auto mode: User knows next step is `/gsd:discuss-phase 1`
 
 **Atomic commits:** Each phase commits its artifacts immediately. If context is lost, artifacts persist.
 
