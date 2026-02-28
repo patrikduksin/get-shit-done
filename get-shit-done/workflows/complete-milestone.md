@@ -538,15 +538,29 @@ Extract `branching_strategy`, `phase_branch_template`, `milestone_branch_templat
 **For "phase" strategy:**
 
 ```bash
-BRANCH_PREFIX=$(echo "$PHASE_BRANCH_TEMPLATE" | sed 's/{.*//')
-PHASE_BRANCHES=$(git branch --list "${BRANCH_PREFIX}*" 2>/dev/null | sed 's/^\*//' | tr -d ' ')
+BRANCH_PREFIX=$(echo "$PHASE_BRANCH_TEMPLATE" | sed 's/{.*//' | tr -d '[:space:]')
+
+# Safety guard: empty prefix would match all branches
+if [ -z "$BRANCH_PREFIX" ]; then
+  echo "Warning: phase_branch_template has no static prefix (starts with variable). Cannot safely detect phase branches."
+  PHASE_BRANCHES=""
+else
+  PHASE_BRANCHES=$(git branch --list "${BRANCH_PREFIX}*" 2>/dev/null | sed 's/^\*//' | tr -d ' ')
+fi
 ```
 
 **For "milestone" strategy:**
 
 ```bash
-BRANCH_PREFIX=$(echo "$MILESTONE_BRANCH_TEMPLATE" | sed 's/{.*//')
-MILESTONE_BRANCH=$(git branch --list "${BRANCH_PREFIX}*" 2>/dev/null | sed 's/^\*//' | tr -d ' ' | head -1)
+BRANCH_PREFIX=$(echo "$MILESTONE_BRANCH_TEMPLATE" | sed 's/{.*//' | tr -d '[:space:]')
+
+# Safety guard: empty prefix would match all branches
+if [ -z "$BRANCH_PREFIX" ]; then
+  echo "Warning: milestone_branch_template has no static prefix (starts with variable). Cannot safely detect milestone branch."
+  MILESTONE_BRANCH=""
+else
+  MILESTONE_BRANCH=$(git branch --list "${BRANCH_PREFIX}*" 2>/dev/null | sed 's/^\*//' | tr -d ' ' | head -1)
+fi
 ```
 
 **If no branches found:** Skip to git_tag.

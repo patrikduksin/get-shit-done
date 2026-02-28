@@ -562,8 +562,12 @@ function cmdInitMilestoneOp(cwd, raw) {
   output(result, raw);
 }
 
-function cmdInitMapCodebase(cwd, raw) {
+function cmdInitMapCodebase(cwd, profileArg, raw) {
   const config = loadConfig(cwd);
+  const normalizedProfile = (profileArg || '').toLowerCase();
+  const profileOverride = ['quality', 'balanced', 'budget'].includes(normalizedProfile)
+    ? normalizedProfile
+    : null;
 
   // Check for existing codebase maps
   const codebaseDir = path.join(cwd, '.planning', 'codebase');
@@ -574,12 +578,13 @@ function cmdInitMapCodebase(cwd, raw) {
 
   const result = {
     // Models
-    mapper_model: resolveModelInternal(cwd, 'gsd-codebase-mapper'),
+    mapper_model: resolveModelInternal(cwd, 'gsd-codebase-mapper', profileOverride),
 
     // Config
     commit_docs: config.commit_docs,
     search_gitignored: config.search_gitignored,
     parallelization: config.parallelization,
+    model_profile: profileOverride || config.model_profile || 'balanced',
 
     // Paths
     codebase_dir: '.planning/codebase',

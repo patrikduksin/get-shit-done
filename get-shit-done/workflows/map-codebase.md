@@ -26,10 +26,20 @@ Documents are reference material for Claude when planning/executing. Always incl
 Load codebase mapping context:
 
 ```bash
-INIT=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" init map-codebase)
+# Optional profile override from command arguments
+PROFILE_OVERRIDE=$(echo "$ARGUMENTS" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
+case "$PROFILE_OVERRIDE" in
+  quality|balanced|budget) ;;
+  *) PROFILE_OVERRIDE="" ;;
+esac
+
+INIT=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" init map-codebase "$PROFILE_OVERRIDE")
 ```
 
-Extract from init JSON: `mapper_model`, `commit_docs`, `codebase_dir`, `existing_maps`, `has_maps`, `codebase_dir_exists`.
+Extract from init JSON: `mapper_model`, `model_profile`, `commit_docs`, `codebase_dir`, `existing_maps`, `has_maps`, `codebase_dir_exists`.
+
+If `PROFILE_OVERRIDE` is set, display:
+`Model profile override: {profile} -> mapper model {mapper_model}`.
 </step>
 
 <step name="check_existing">

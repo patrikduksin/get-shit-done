@@ -540,7 +540,7 @@ async function main() {
           init.cmdInitMilestoneOp(cwd, raw);
           break;
         case 'map-codebase':
-          init.cmdInitMapCodebase(cwd, raw);
+          init.cmdInitMapCodebase(cwd, args[2], raw);
           break;
         case 'progress':
           init.cmdInitProgress(cwd, raw);
