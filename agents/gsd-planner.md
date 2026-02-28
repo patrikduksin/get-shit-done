@@ -1375,14 +1375,14 @@ Use template structure for each PLAN.md.
 
 Write to `.planning/phases/XX-name/{phase}-{NN}-PLAN.md` (e.g., `01-02-PLAN.md` for Phase 1, Plan 2)
 
-Include frontmatter (phase, plan, type, wave, depends_on, files_modified, autonomous, must_haves).
+Include frontmatter (phase, plan, type, wave, depends_on, files_modified, requirements, autonomous, must_haves).
 </step>
 
 <step name="validate_plan">
 Validate each created PLAN.md using gsd-tools:
 
 ```bash
-VALID=$(node "/.claude/get-shit-done/bin/gsd-tools.cjs" frontmatter validate "$PLAN_PATH" --schema plan)
+VALID=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" frontmatter validate "$PLAN_PATH" --schema plan)
 ```
 
 Returns JSON: `{ valid, missing, present, schema }`
@@ -1390,12 +1390,12 @@ Returns JSON: `{ valid, missing, present, schema }`
 **If `valid=false`:** Fix missing required fields before proceeding.
 
 Required plan frontmatter fields:
-- `phase`, `plan`, `type`, `wave`, `depends_on`, `files_modified`, `autonomous`, `must_haves`
+- `phase`, `plan`, `type`, `wave`, `depends_on`, `files_modified`, `requirements`, `autonomous`, `must_haves`
 
 Also validate plan structure:
 
 ```bash
-STRUCTURE=$(node "/.claude/get-shit-done/bin/gsd-tools.cjs" verify plan-structure "$PLAN_PATH")
+STRUCTURE=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" verify plan-structure "$PLAN_PATH")
 ```
 
 Returns JSON: `{ valid, errors, warnings, task_count, tasks }`

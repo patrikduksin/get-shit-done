@@ -145,7 +145,7 @@ Use AskUserQuestion:
   - "View it" — Show me what's there
   - "Skip" — Use existing context as-is
 
-If "Update": Load existing, continue to analyze_phase
+If "Update": Load existing, continue to scout_codebase (then analyze_phase)
 If "View": Display CONTEXT.md, then offer update/skip
 If "Skip": Exit workflow
 
@@ -161,7 +161,7 @@ Use AskUserQuestion:
   - "View existing plans" — Show plans before deciding
   - "Cancel" — Skip discuss-phase
 
-If "Continue and replan after": Continue to analyze_phase.
+If "Continue and replan after": Continue to scout_codebase (then analyze_phase).
 If "View existing plans": Display plan files, then offer "Continue" / "Cancel".
 If "Cancel": Exit workflow.
 

@@ -21,9 +21,15 @@ A detailed reference for workflows, troubleshooting, and configuration. For quic
 
 ```
   ┌──────────────────────────────────────────────────┐
-  │                   NEW PROJECT                    │
+  │              INITIALIZE PROJECT CONTEXT          │
   │  /gsd:new-project                                │
-  │  Questions -> Research -> Requirements -> Roadmap│
+  │  Deep questions -> PROJECT.md                    │
+  └─────────────────────────┬────────────────────────┘
+                            │
+  ┌──────────────────────────────────────────────────┐
+  │               BUILD EXECUTION ROADMAP            │
+  │  /gsd:init-roadmap                               │
+  │  Config -> Research -> Requirements -> Roadmap   │
   └─────────────────────────┬────────────────────────┘
                             │
              ┌──────────────▼─────────────┐
@@ -146,9 +152,11 @@ rapid prototyping phases where test infrastructure isn't the focus.
          ├── Convention Mapper -> codebase/CONVENTIONS.md
          └── Concern Mapper   -> codebase/CONCERNS.md
                 │
-        ┌───────▼──────────┐
-        │ /gsd:new-project │  <- Questions focus on what you're ADDING
-        └──────────────────┘
+        ┌──────────────────────────────────────────────────┐
+        │ /gsd:new-project -> /gsd:init-roadmap           │
+        │ Questions focus on what you're ADDING, then     │
+        │ build roadmap for that addition                 │
+        └──────────────────────────────────────────────────┘
 ```
 
 ---

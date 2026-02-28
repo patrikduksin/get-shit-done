@@ -235,9 +235,11 @@ The "What it builds" column comes from skimming plan names/objectives. Keep it b
 </step>
 
 <step name="execute_waves">
-Execute each wave in sequence. Autonomous plans within a wave run in parallel **only if `PARALLELIZATION=true`**.
+Execute each wave in sequence.
 
-**If `PARALLELIZATION=false`:** Execute plans within each wave sequentially (one at a time). This prevents side effects from concurrent operations like tests, linting, and code generation.
+**Concurrency safety guard:** executor plans update shared planning artifacts (`STATE.md`, `ROADMAP.md`, `REQUIREMENTS.md`). To avoid write collisions in a shared worktree, execute plans within each wave sequentially unless you are explicitly using isolated worktrees/branches per plan.
+
+Treat `PARALLELIZATION=true` as advisory; default to sequential execution for conservative correctness.
 
 **For each wave:**
 
@@ -277,9 +279,9 @@ Execute each wave in sequence. Autonomous plans within a wave run in parallel **
    CONFIG_CONTENT=$(cat .planning/config.json 2>/dev/null)
    ```
 
-   **If `PARALLELIZATION=true` (default):** Use Task tool with multiple parallel calls.
-   
-   **If `PARALLELIZATION=false`:** Spawn agents one at a time, waiting for each to complete before starting the next. This ensures no concurrent file modifications or build operations.
+   **Default:** Spawn agents one at a time, waiting for each to complete before starting the next.
+
+   **Only if isolated worktrees are in use and explicitly validated safe:** use Task tool with multiple parallel calls.
 
    Each agent gets prompt with inlined content:
 
@@ -506,7 +508,7 @@ After all waves complete, aggregate results:
 Verify phase achieved its GOAL, not just completed its TASKS.
 
 ```bash
-PHASE_REQ_IDS=$(node "/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PADDED_PHASE}" | jq -r '.section' | grep -i "Requirements:" | sed 's/.*Requirements:\*\*\s*//' | sed 's/[\[\]]//g')
+PHASE_REQ_IDS=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PADDED_PHASE}" | jq -r '.section' | grep -i "Requirements:" | sed 's/.*Requirements:\*\*\s*//' | sed 's/[\[\]]//g')
 ```
 
 **Spawn verifier:**
@@ -612,7 +614,7 @@ User stays in control at each decision point.
 Update ROADMAP.md to reflect phase completion using deterministic plan progress from disk:
 
 ```bash
-node "/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap update-plan-progress "${PADDED_PHASE}"
+node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap update-plan-progress "${PADDED_PHASE}"
 ```
 
 This counts PLAN vs SUMMARY files directly and updates the roadmap progress table row.

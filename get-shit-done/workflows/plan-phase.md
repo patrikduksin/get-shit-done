@@ -331,7 +331,38 @@ Task(
 
 - **`## PLANNING COMPLETE`:** Display plan count. If `--skip-verify` or `plan_checker_enabled` is false (from init): skip to step 13. Otherwise: step 10.
 - **`## CHECKPOINT REACHED`:** Present to user, get response, spawn continuation (step 12)
+- **`## QUESTIONS_PENDING`:** Ask user the pending question(s), send answers back to planner continuation, then return to step 9
 - **`## PLANNING INCONCLUSIVE`:** Show attempts, offer: Add context / Retry / Manual
+
+**For `## QUESTIONS_PENDING`:**
+
+1. Present each pending question exactly as returned.
+2. Collect user answers.
+3. Spawn planner continuation with:
+   - phase info
+   - previous analysis state (if provided)
+   - structured user answers
+4. Planner must continue from where it paused and return one of:
+   - `## PLANNING COMPLETE`
+   - `## CHECKPOINT REACHED`
+   - `## QUESTIONS_PENDING`
+   - `## PLANNING INCONCLUSIVE`
+
+```text
+Task(
+  prompt="First, read ~/.claude/agents/gsd-planner.md for your role and instructions.\n\n
+  <continuation_context>
+  Phase: {phase_number}
+  User answers: {answers}
+  Prior analysis state: {analysis_state_if_any}
+  </continuation_context>
+
+  Continue planning from the paused decision point. Do not restart from scratch.",
+  subagent_type="general-purpose",
+  model="{planner_model}",
+  description="Continue Phase {phase} planning"
+)
+```
 
 ## 10. Spawn gsd-plan-checker Agent
 
