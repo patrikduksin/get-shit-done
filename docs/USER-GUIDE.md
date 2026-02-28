@@ -159,8 +159,8 @@ rapid prototyping phases where test infrastructure isn't the focus.
 
 | Command | Purpose | When to Use |
 |---------|---------|-------------|
-| `/gsd:new-project` | Full project init: questions, research, requirements, roadmap | Start of a new project |
-| `/gsd:new-project --auto @idea.md` | Automated init from document | Have a PRD or idea doc ready |
+| `/gsd:new-project` | Deep questioning and PROJECT.md creation | Start of a new project |
+| `/gsd:init-roadmap` | Configure workflow, research, requirements, and roadmap | Right after `/gsd:new-project` |
 | `/gsd:discuss-phase [N]` | Capture implementation decisions | Before planning, to shape how it gets built |
 | `/gsd:plan-phase [N]` | Research + plan + verify | Before executing a phase |
 | `/gsd:execute-phase <N>` | Execute all plans in parallel waves | After planning is complete |
@@ -208,7 +208,7 @@ rapid prototyping phases where test infrastructure isn't the focus.
 
 ## Configuration Reference
 
-GSD stores project settings in `.planning/config.json`. Configure during `/gsd:new-project` or update later with `/gsd:settings`.
+GSD stores project settings in `.planning/config.json`. Configure during `/gsd:init-roadmap` or update later with `/gsd:settings`.
 
 ### Full config.json Schema
 
@@ -306,11 +306,12 @@ Disable these to speed up phases in familiar domains or when conserving tokens.
 
 ## Usage Examples
 
-### New Project (Full Cycle)
+### New Project (Split Init Flow)
 
 ```bash
 claude --dangerously-skip-permissions
-/gsd:new-project            # Answer questions, configure, approve roadmap
+/gsd:new-project            # Deep questioning -> PROJECT.md
+/gsd:init-roadmap           # Config, research, requirements, roadmap
 /clear
 /gsd:discuss-phase 1        # Lock in your preferences
 /gsd:plan-phase 1           # Research + plan + verify
@@ -323,19 +324,12 @@ claude --dangerously-skip-permissions
 /gsd:complete-milestone     # Archive, tag, done
 ```
 
-### New Project from Existing Document
-
-```bash
-/gsd:new-project --auto @prd.md   # Auto-runs research/requirements/roadmap from your doc
-/clear
-/gsd:discuss-phase 1               # Normal flow from here
-```
-
 ### Existing Codebase
 
 ```bash
 /gsd:map-codebase           # Analyze what exists (parallel agents)
 /gsd:new-project            # Questions focus on what you're ADDING
+/gsd:init-roadmap           # Build roadmap for what you're adding
 # (normal phase workflow from here)
 ```
 
@@ -414,7 +408,7 @@ Switch to budget profile: `/gsd:set-profile budget`. Disable research and plan-c
 
 ### Working on a Sensitive/Private Project
 
-Set `commit_docs: false` during `/gsd:new-project` or via `/gsd:settings`. Add `.planning/` to your `.gitignore`. Planning artifacts stay local and never touch git.
+Set `commit_docs: false` during `/gsd:init-roadmap` or via `/gsd:settings`. Add `.planning/` to your `.gitignore`. Planning artifacts stay local and never touch git.
 
 ### GSD Update Overwrote My Local Changes
 
@@ -454,7 +448,7 @@ For reference, here is what GSD creates in your project:
   STATE.md                # Decisions, blockers, session memory
   config.json             # Workflow configuration
   MILESTONES.md           # Completed milestone archive
-  research/               # Domain research from /gsd:new-project
+  research/               # Domain research from /gsd:init-roadmap
   todos/
     pending/              # Captured ideas awaiting work
     done/                 # Completed todos
