@@ -99,67 +99,83 @@ For each task:
 </execution_flow>
 
 <deviation_rules>
-**While executing, you WILL discover work not in the plan.** Apply these rules automatically. Track all deviations for Summary.
+**While executing tasks, you WILL discover work not in the plan.** This is normal.
 
-**Shared process for Rules 1-3:** Fix inline → add/update tests if applicable → verify fix → continue task → track as `[Rule N - Type] description`
-
-No user permission needed for Rules 1-3.
+Apply the 3-tier system below.
 
 ---
 
-**RULE 1: Auto-fix bugs**
+## Tier 1: Quiet Auto-Fix (Low Risk)
 
-**Trigger:** Code doesn't work as intended (broken behavior, errors, incorrect output)
+**Definition:** Syntax errors, missing imports, obvious type mismatches, and direct typo-level fixes.
 
-**Examples:** Wrong queries, logic errors, type errors, null pointer exceptions, broken validation, security vulnerabilities, race conditions, memory leaks
+**Action:** Fix immediately and continue. No special logging needed.
 
----
+**Examples:**
+- Syntax or formatting breakage that prevents execution
+- Missing import for an already-planned dependency
+- Obvious null/undefined typo fix in the task's touched files
+- Straightforward variable name typo
 
-**RULE 2: Auto-add missing critical functionality**
-
-**Trigger:** Code missing essential features for correctness, security, or basic operation
-
-**Examples:** Missing error handling, no input validation, missing null checks, no auth on protected routes, missing authorization, no CSRF/CORS, no rate limiting, missing DB indexes, no error logging
-
-**Critical = required for correct/secure/performant operation.** These aren't "features" — they're correctness requirements.
+**Process:** Fix inline -> continue task.
 
 ---
 
-**RULE 3: Auto-fix blocking issues**
+## Tier 2: Notable Auto-Fix (Medium Risk)
 
-**Trigger:** Something prevents completing current task
+**Definition:** Logic or defensive correctness gaps where plan intent is still clear, but execution reveals missing or incorrect details.
 
-**Examples:** Missing dependency, wrong types, broken imports, missing env var, DB connection error, build config error, missing referenced file, circular dependency
+**Action:** Fix immediately, then document in `SUMMARY.md` under `## Notable Fixes`.
+
+**Examples:**
+- Wrong conditional, query, or state-transition logic
+- Missing null checks or error handling that causes runtime failures
+- Missing security validation implied by the task scope
+- Missing package/config wiring clearly implied by selected approach
+
+**Process:** Fix inline -> add/update tests when appropriate -> verify fix -> continue -> document:
+- what was wrong
+- why the original plan detail was insufficient
+- what was changed
 
 ---
 
-**RULE 4: Ask about architectural changes**
+## Tier 3: Stop & Discuss (High Risk)
 
-**Trigger:** Fix requires significant structural modification
+**Definition:** The fix requires architectural or scope-expanding change, or touches files outside planned scope in a non-trivial way.
 
-**Examples:** New DB table (not column), major schema changes, new service layer, switching libraries/frameworks, changing auth approach, new infrastructure, breaking API changes
+**Action:** STOP execution and return a checkpoint for orchestrator/user decision before making the change.
 
-**Action:** STOP → return checkpoint with: what found, proposed change, why needed, impact, alternatives. **User decision required.**
+**Examples:**
+- Requires modifying a file not listed in `files_modified` with non-trivial impact
+- New database table or major schema direction change
+- Switching selected library/framework/pattern
+- Changing authentication approach or API contract shape
+- New infrastructure introduction (cache layer, queue, etc.)
+- Race condition/infinite loop requiring structural redesign
+
+**Checkpoint must include:**
+- what was discovered
+- why it blocks safe continuation
+- recommended option and alternatives
+- impact and trade-off summary
+
+Do not continue until a decision is provided.
 
 ---
 
-**RULE PRIORITY:**
-1. Rule 4 applies → STOP (architectural decision)
-2. Rules 1-3 apply → Fix automatically
-3. Genuinely unsure → Rule 4 (ask)
+## Tier Priority
 
-**Edge cases:**
-- Missing validation → Rule 2 (security)
-- Crashes on null → Rule 1 (bug)
-- Need new table → Rule 4 (architectural)
-- Need new column → Rule 1 or 2 (depends on context)
+1. Check Tier 3 first (safety/scope/architecture)
+2. Then Tier 2 (notable but bounded fix)
+3. Otherwise Tier 1 (routine fix)
 
-**When in doubt:** "Does this affect correctness, security, or ability to complete task?" YES → Rules 1-3. MAYBE → Rule 4.
+**When unsure:** choose Tier 3.
 
 ---
 
 **SCOPE BOUNDARY:**
-Only auto-fix issues DIRECTLY caused by the current task's changes. Pre-existing warnings, linting errors, or failures in unrelated files are out of scope.
+Only auto-fix issues directly caused by the current task's changes. Pre-existing warnings, linting errors, or failures in unrelated files are out of scope.
 - Log out-of-scope discoveries to `deferred-items.md` in the phase directory
 - Do NOT fix them
 - Do NOT re-run builds hoping they resolve themselves
@@ -180,7 +196,7 @@ Track auto-fix attempts per task. After 3 auto-fix attempts on a single task:
 
 **Track:**
 - New patterns you introduce that get repeated
-- Patterns in existing code that aren't documented
+- Patterns in existing code that are not documented
 - Deviations from documented conventions (may indicate stale convention)
 
 **NOT a blocker.** This happens in the background and surfaces in Summary:
@@ -233,7 +249,7 @@ Store the result for checkpoint handling below.
 
 **CRITICAL: Automation before verification**
 
-Before any `checkpoint:human-verify`, ensure verification environment is ready. If plan lacks server startup before checkpoint, ADD ONE (deviation Rule 3).
+Before any `checkpoint:human-verify`, ensure verification environment is ready. If plan lacks server startup before checkpoint, add one using Tier 2 or Tier 3 judgment based on impact.
 
 For full automation-first patterns, server lifecycle, CLI handling:
 **See @~/.claude/get-shit-done/references/checkpoints.md**
@@ -374,14 +390,18 @@ After all tasks complete, create `{phase}-{plan}-SUMMARY.md` at `.planning/phase
 ```markdown
 ## Deviations from Plan
 
-### Auto-fixed Issues
+### Notable Fixes (Tier 2)
 
-**1. [Rule 1 - Bug] Fixed case-sensitive email uniqueness**
+**1. Fixed case-sensitive email uniqueness**
 - **Found during:** Task 4
 - **Issue:** [description]
-- **Fix:** [what was done]
+- **Why plan detail was insufficient:** [why]
+- **Fix applied:** [what was done]
 - **Files modified:** [files]
 - **Commit:** [hash]
+
+### Stop & Discuss Events (Tier 3)
+- [checkpoint summary + decision outcome]
 ```
 
 Or: "None - plan executed exactly as written."
