@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Cross-platform test runner — resolves test file globs via Node
 // instead of relying on shell expansion (which fails on Windows PowerShell/cmd).
+// Propagates NODE_V8_COVERAGE so c8 collects coverage from the child process.
 'use strict';
 
 const { readdirSync } = require('fs');
@@ -19,7 +20,10 @@ if (files.length === 0) {
 }
 
 try {
-  execFileSync(process.execPath, ['--test', ...files], { stdio: 'inherit' });
+  execFileSync(process.execPath, ['--test', ...files], {
+    stdio: 'inherit',
+    env: { ...process.env },
+  });
 } catch (err) {
   process.exit(err.status || 1);
 }
