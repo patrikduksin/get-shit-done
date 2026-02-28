@@ -9,9 +9,10 @@ Display the complete GSD command reference. Output ONLY the reference content. D
 
 ## Quick Start
 
-1. `/gsd:new-project` - Initialize project (includes research, requirements, roadmap)
-2. `/gsd:plan-phase 1` - Create detailed plan for first phase
-3. `/gsd:execute-phase 1` - Execute the phase
+1. `/gsd:new-project` - Deep questioning and PROJECT.md
+2. `/gsd:init-roadmap` - Config, research, requirements, roadmap
+3. `/gsd:plan-phase 1` - Create detailed plan for first phase
+4. `/gsd:execute-phase 1` - Execute the phase
 
 ## Staying Updated
 
@@ -24,29 +25,35 @@ npx get-shit-done-cc@latest
 ## Core Workflow
 
 ```
-/gsd:new-project → /gsd:plan-phase → /gsd:execute-phase → repeat
+/gsd:new-project → /gsd:init-roadmap → /gsd:plan-phase → /gsd:execute-phase → repeat
 ```
 
 ### Project Initialization
 
 **`/gsd:new-project`**
-Initialize new project through unified flow.
+Initialize project context through deep questioning.
 
-One command takes you from idea to ready-for-planning:
-- Deep questioning to understand what you're building
+Creates:
+- `PROJECT.md` — vision and requirements context
+
+Usage: `/gsd:new-project`
+
+**`/gsd:init-roadmap`**
+Continue initialization after `PROJECT.md`.
+
+- Workflow configuration
 - Optional domain research (spawns 4 parallel researcher agents)
 - Requirements definition with v1/v2/out-of-scope scoping
 - Roadmap creation with phase breakdown and success criteria
 
-Creates all `.planning/` artifacts:
-- `PROJECT.md` — vision and requirements
-- `config.json` — workflow mode (interactive/yolo)
+Creates:
+- `config.json` — workflow settings
 - `research/` — domain research (if selected)
 - `REQUIREMENTS.md` — scoped requirements with REQ-IDs
 - `ROADMAP.md` — phases mapped to requirements
 - `STATE.md` — project memory
 
-Usage: `/gsd:new-project`
+Usage: `/gsd:init-roadmap`
 
 **`/gsd:map-codebase`**
 Map an existing codebase for brownfield projects.

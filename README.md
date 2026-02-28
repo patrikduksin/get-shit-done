@@ -195,18 +195,17 @@ If you prefer not to use that flag, add this to your project's `.claude/settings
 
 ```
 /gsd:new-project
+/gsd:init-roadmap
 ```
 
-One command, one flow. The system:
+Two-stage flow with a deliberate context reset:
 
-1. **Questions** — Asks until it understands your idea completely (goals, constraints, tech preferences, edge cases)
-2. **Research** — Spawns parallel agents to investigate the domain (optional but recommended)
-3. **Requirements** — Extracts what's v1, v2, and out of scope
-4. **Roadmap** — Creates phases mapped to requirements
+1. **`new-project`** — Asks until it understands your idea completely (goals, constraints, tech preferences, edge cases) and writes `PROJECT.md`.
+2. **`init-roadmap`** — Workflow config, optional research, requirements scoping, and roadmap creation.
 
-You approve the roadmap. Now you're ready to build.
+This preserves a clean context boundary between project capture and roadmap generation.
 
-**Creates:** `PROJECT.md`, `REQUIREMENTS.md`, `ROADMAP.md`, `STATE.md`, `.planning/research/`
+**Creates:** `PROJECT.md`, `config.json`, `REQUIREMENTS.md`, `ROADMAP.md`, `STATE.md`, `.planning/research/`
 
 ---
 
@@ -466,7 +465,8 @@ You're never locked in. The system adapts.
 
 | Command | What it does |
 |---------|--------------|
-| `/gsd:new-project [--auto]` | Full initialization: questions → research → requirements → roadmap |
+| `/gsd:new-project [--auto]` | Stage 1 init: deep questioning → PROJECT.md (interactive). `--auto` runs full end-to-end |
+| `/gsd:init-roadmap` | Stage 2 init: config → research → requirements → roadmap |
 | `/gsd:discuss-phase [N] [--auto]` | Capture implementation decisions before planning |
 | `/gsd:plan-phase [N] [--auto]` | Research + plan + verify for a phase |
 | `/gsd:execute-phase <N>` | Execute all plans in parallel waves, verify when complete |
@@ -525,7 +525,7 @@ You're never locked in. The system adapts.
 
 ## Configuration
 
-GSD stores project settings in `.planning/config.json`. Configure during `/gsd:new-project` or update later with `/gsd:settings`. For the full config schema, workflow toggles, git branching options, and per-agent model breakdown, see the [User Guide](docs/USER-GUIDE.md#configuration-reference).
+GSD stores project settings in `.planning/config.json`. Configure during `/gsd:init-roadmap` (or `/gsd:new-project --auto`) and update later with `/gsd:settings`. For the full config schema, workflow toggles, git branching options, and per-agent model breakdown, see the [User Guide](docs/USER-GUIDE.md#configuration-reference).
 
 ### Core Settings
 
