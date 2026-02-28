@@ -73,6 +73,8 @@ Ask whether to research the domain before requirements.
 If yes:
 - Create `.planning/research/`
 - Spawn 4 parallel `gsd-project-researcher` agents for STACK/FEATURES/ARCHITECTURE/PITFALLS.
+- Anchor STACK research with the prompt: `What's the standard 2026 stack for [domain]?`
+- Require current-version validation from Context7 and official docs (not training-only assumptions).
 - Each agent reads `.planning/PROJECT.md`.
 - Spawn `gsd-research-synthesizer` to produce `.planning/research/SUMMARY.md`.
 

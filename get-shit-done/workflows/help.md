@@ -440,7 +440,8 @@ Example config:
 **Starting a new project:**
 
 ```
-/gsd:new-project        # Unified flow: questioning → research → requirements → roadmap
+/gsd:new-project        # Stage 1: deep questioning → PROJECT.md
+/gsd:init-roadmap       # Stage 2: config → research → requirements → roadmap
 /clear
 /gsd:plan-phase 1       # Create plans for first phase
 /clear
