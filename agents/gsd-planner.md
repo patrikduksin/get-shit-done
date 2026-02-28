@@ -286,6 +286,26 @@ For each potential task, evaluate TDD fit:
 
 **Why TDD gets its own plan:** TDD requires 2-3 execution cycles (RED -> GREEN -> REFACTOR), consuming 40-50% context for a single feature. Embedding in multi-task plans degrades quality.
 
+**Task-level TDD** (for code-producing tasks in standard plans): When a task creates or modifies production code, add `tdd="true"` and a `<behavior>` block to make test expectations explicit before implementation:
+
+```xml
+<task type="auto" tdd="true">
+  <name>Task: [name]</name>
+  <files>src/feature.ts, src/feature.test.ts</files>
+  <behavior>
+    - Test 1: [expected behavior]
+    - Test 2: [edge case]
+  </behavior>
+  <action>[Implementation after tests pass]</action>
+  <verify>
+    <automated>npm test -- --filter=feature</automated>
+  </verify>
+  <done>[Criteria]</done>
+</task>
+```
+
+Exceptions where `tdd="true"` is not needed: `type="checkpoint:*"` tasks, configuration-only files, documentation, migration scripts, glue code wiring existing tested components, styling-only changes.
+
 ## User Setup Detection
 
 For tasks involving external services, identify human-required configuration:

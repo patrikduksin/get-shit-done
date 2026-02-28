@@ -482,6 +482,9 @@ User can log out     | -     | -     | MISSING
 Session persists     | 01    | 3     | COVERED
 ```
 
+For each requirement: find covering task(s), verify action is specific, flag gaps.
+
+**Exhaustive cross-check:** Also read PROJECT.md requirements (not just phase goal). Verify no PROJECT.md requirement relevant to this phase is silently dropped. Any unmapped requirement is an automatic blocker — list it explicitly in issues.
 ## Step 5: Validate Task Structure
 
 For each task, verify required fields exist.
