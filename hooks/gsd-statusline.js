@@ -27,6 +27,23 @@ process.stdin.on('end', () => {
       // Scale: 80% real usage = 100% displayed
       const used = Math.min(100, Math.round((rawUsed / 80) * 100));
 
+      // Write context metrics to bridge file for the context-monitor PostToolUse hook.
+      // The monitor reads this file to inject agent-facing warnings when context is low.
+      if (session) {
+        try {
+          const bridgePath = path.join(os.tmpdir(), `claude-ctx-${session}.json`);
+          const bridgeData = JSON.stringify({
+            session_id: session,
+            remaining_percentage: remaining,
+            used_pct: used,
+            timestamp: Math.floor(Date.now() / 1000)
+          });
+          fs.writeFileSync(bridgePath, bridgeData);
+        } catch (e) {
+          // Silent fail -- bridge is best-effort, don't break statusline
+        }
+      }
+
       // Build progress bar (10 segments)
       const filled = Math.floor(used / 10);
       const bar = '█'.repeat(filled) + '░'.repeat(10 - filled);
@@ -48,17 +65,21 @@ process.stdin.on('end', () => {
     const homeDir = os.homedir();
     const todosDir = path.join(homeDir, '.claude', 'todos');
     if (session && fs.existsSync(todosDir)) {
-      const files = fs.readdirSync(todosDir)
-        .filter(f => f.startsWith(session) && f.includes('-agent-') && f.endsWith('.json'))
-        .map(f => ({ name: f, mtime: fs.statSync(path.join(todosDir, f)).mtime }))
-        .sort((a, b) => b.mtime - a.mtime);
+      try {
+        const files = fs.readdirSync(todosDir)
+          .filter(f => f.startsWith(session) && f.includes('-agent-') && f.endsWith('.json'))
+          .map(f => ({ name: f, mtime: fs.statSync(path.join(todosDir, f)).mtime }))
+          .sort((a, b) => b.mtime - a.mtime);
 
-      if (files.length > 0) {
-        try {
-          const todos = JSON.parse(fs.readFileSync(path.join(todosDir, files[0].name), 'utf8'));
-          const inProgress = todos.find(t => t.status === 'in_progress');
-          if (inProgress) task = inProgress.activeForm || '';
-        } catch (e) {}
+        if (files.length > 0) {
+          try {
+            const todos = JSON.parse(fs.readFileSync(path.join(todosDir, files[0].name), 'utf8'));
+            const inProgress = todos.find(t => t.status === 'in_progress');
+            if (inProgress) task = inProgress.activeForm || '';
+          } catch (e) {}
+        }
+      } catch (e) {
+        // Silently fail on file system errors - don't break statusline
       }
     }
 

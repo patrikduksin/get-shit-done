@@ -66,6 +66,15 @@ git check-ignore -q .planning 2>/dev/null && COMMIT_PLANNING_DOCS=false
 
 Store `COMMIT_PLANNING_DOCS` for use in git operations.
 
+**Load parallelization config:**
+
+```bash
+# Check if parallelization is enabled (default: true)
+PARALLELIZATION=$(cat .planning/config.json 2>/dev/null | grep -o '"parallelization"[[:space:]]*:[[:space:]]*[^,}]*' | grep -o 'true\|false' || echo "true")
+```
+
+Store `PARALLELIZATION` for use in wave execution step. When `false`, plans within a wave execute sequentially instead of in parallel.
+
 **Load git branching config:**
 
 ```bash
@@ -226,7 +235,11 @@ The "What it builds" column comes from skimming plan names/objectives. Keep it b
 </step>
 
 <step name="execute_waves">
-Execute each wave in sequence. Autonomous plans within a wave run in parallel.
+Execute each wave in sequence.
+
+**Concurrency safety guard:** executor plans update shared planning artifacts (`STATE.md`, `ROADMAP.md`, `REQUIREMENTS.md`). To avoid write collisions in a shared worktree, execute plans within each wave sequentially unless you are explicitly using isolated worktrees/branches per plan.
+
+Treat `PARALLELIZATION=true` as advisory; default to sequential execution for conservative correctness.
 
 **For each wave:**
 
@@ -255,7 +268,7 @@ Execute each wave in sequence. Autonomous plans within a wave run in parallel.
    - Bad: "Executing terrain generation plan"
    - Good: "Procedural terrain generator using Perlin noise — creates height maps, biome zones, and collision meshes. Required before vehicle physics can interact with ground."
 
-2. **Read files and spawn all autonomous agents in wave simultaneously:**
+2. **Read files and spawn agents:**
 
    Before spawning, read file contents. The `@` syntax does not work across Task() boundaries - content must be inlined.
 
@@ -266,13 +279,17 @@ Execute each wave in sequence. Autonomous plans within a wave run in parallel.
    CONFIG_CONTENT=$(cat .planning/config.json 2>/dev/null)
    ```
 
-   Use Task tool with multiple parallel calls. Each agent gets prompt with inlined content:
+   **Default:** Spawn agents one at a time, waiting for each to complete before starting the next.
+
+   **Only if isolated worktrees are in use and explicitly validated safe:** use Task tool with multiple parallel calls.
+
+   Each agent gets prompt with inlined content:
 
    ```
    <objective>
    Execute plan {plan_number} of phase {phase_number}-{phase_name}.
 
-   Commit each task atomically. Create SUMMARY.md. Update STATE.md.
+   Commit each task atomically. Create SUMMARY.md. Update STATE.md, ROADMAP.md, and REQUIREMENTS.md as required.
    </objective>
 
    <execution_context>
@@ -291,6 +308,9 @@ Execute each wave in sequence. Autonomous plans within a wave run in parallel.
 
    Config (if exists):
    {config_content}
+
+   Project skills:
+   If `.claude/skills/` or `.agents/skills/` exists, list available skills, read each `SKILL.md` index, and load only relevant rule files while implementing tasks.
    </context>
 
    <success_criteria>
@@ -298,6 +318,7 @@ Execute each wave in sequence. Autonomous plans within a wave run in parallel.
    - [ ] Each task committed individually
    - [ ] SUMMARY.md created in plan directory
    - [ ] STATE.md updated with position and decisions
+   - [ ] ROADMAP.md progress and requirement tracking updated
    </success_criteria>
    ```
 
@@ -311,6 +332,20 @@ Execute each wave in sequence. Autonomous plans within a wave run in parallel.
    - Verify SUMMARY.md exists at expected path
    - Read SUMMARY.md to extract what was built
    - Note any issues or deviations
+
+   **Spot-check claims before trusting SUMMARY:**
+
+   For each completed plan's SUMMARY.md:
+   - Pick the first 2 files from `key-files.created` frontmatter — verify they exist on disk with `[ -f ]`
+   - Check `git log --oneline --all --grep="{phase}-{plan}"` returns at least 1 commit
+   - Check SUMMARY.md for `## Self-Check: FAILED` marker
+
+   If ANY spot-check fails:
+   - Do NOT proceed silently
+   - Report which plan failed verification and what was missing
+   - Route to failure handler (step 4): ask user "Retry plan?" or "Continue with remaining waves?"
+
+   If spot-checks pass: proceed normally.
 
    **Output:**
    ```
@@ -335,6 +370,14 @@ Execute each wave in sequence. Autonomous plans within a wave run in parallel.
    - Good: "Terrain system complete — 3 biome types, height-based texturing, physics collision meshes. Vehicle physics (Wave 3) can now reference ground surfaces."
 
 4. **Handle failures:**
+
+   **Known Claude Code bug (`classifyHandoffIfNeeded`):**
+   If an agent reports failure containing `classifyHandoffIfNeeded is not defined`, treat this as a runtime reporting bug.
+   Re-run the same spot-checks from step 3:
+   - SUMMARY.md exists
+   - matching git commit(s) exist
+   - no `## Self-Check: FAILED`
+   If spot-checks pass, treat the plan as successful.
 
    If any agent in wave fails:
    - Report which plan failed and why
@@ -464,6 +507,10 @@ After all waves complete, aggregate results:
 <step name="verify_phase_goal">
 Verify phase achieved its GOAL, not just completed its TASKS.
 
+```bash
+PHASE_REQ_IDS=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PADDED_PHASE}" | jq -r '.section' | grep -i "Requirements:" | sed 's/.*Requirements:\*\*\s*//' | sed 's/[\[\]]//g')
+```
+
 **Spawn verifier:**
 
 ```
@@ -472,8 +519,11 @@ Task(
 
 Phase directory: {phase_dir}
 Phase goal: {goal from ROADMAP.md}
+Phase requirement IDs: {phase_req_ids}
 
-Check must_haves against actual codebase. Create VERIFICATION.md.
+Check must_haves against actual codebase.
+Cross-reference requirement IDs from PLAN frontmatter against REQUIREMENTS.md — every ID MUST be accounted for.
+Create VERIFICATION.md.
 Verify what actually exists in the code.",
   subagent_type="gsd-verifier",
   model="{verifier_model}"
@@ -527,7 +577,7 @@ Present gaps and offer next command:
 ## ⚠ Phase {X}: {Name} — Gaps Found
 
 **Score:** {N}/{M} must-haves verified
-**Report:** {phase_dir}/{phase}-VERIFICATION.md
+**Report:** {phase_dir}/{phase_num}-VERIFICATION.md
 
 ### What's Missing
 
@@ -546,7 +596,7 @@ Present gaps and offer next command:
 ---
 
 **Also available:**
-- `cat {phase_dir}/{phase}-VERIFICATION.md` — see full report
+- `cat {phase_dir}/{phase_num}-VERIFICATION.md` — see full report
 - `/gsd:verify-work {X}` — manual testing before planning
 ```
 
@@ -561,13 +611,13 @@ User stays in control at each decision point.
 </step>
 
 <step name="update_roadmap">
-Update ROADMAP.md to reflect phase completion:
+Update ROADMAP.md to reflect phase completion using deterministic plan progress from disk:
 
 ```bash
-# Mark phase complete
-# Update completion date
-# Update status
+node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap update-plan-progress "${PADDED_PHASE}"
 ```
+
+This counts PLAN vs SUMMARY files directly and updates the roadmap progress table row.
 
 **Check planning config:**
 
@@ -597,7 +647,7 @@ Present next steps based on milestone status:
 
 **Phase {X+1}: {Name}** — {Goal}
 
-`/gsd:plan-phase {X+1}`
+`/gsd:discuss-phase {X+1}`
 
 <sub>`/clear` first for fresh context</sub>
 ```
@@ -621,6 +671,11 @@ No polling (Task blocks). No context bleed.
 </context_efficiency>
 
 <failure_handling>
+**classifyHandoffIfNeeded false failure:**
+- Agent reports "failed" with `classifyHandoffIfNeeded is not defined`
+- This is Claude Code runtime bug, not a GSD execution failure
+- Spot-check SUMMARY + commits; if checks pass, treat as success
+
 **Subagent fails mid-plan:**
 - SUMMARY.md won't exist
 - Orchestrator detects missing SUMMARY

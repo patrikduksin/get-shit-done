@@ -1,7 +1,7 @@
 ---
 name: gsd:plan-phase
-description: Create detailed execution plan for a phase (PLAN.md) with verification loop
-argument-hint: "[phase] [--research] [--skip-research] [--gaps] [--skip-verify]"
+description: Create detailed phase plan (PLAN.md) with verification loop
+argument-hint: "[phase] [--auto] [--research] [--skip-research] [--gaps] [--skip-verify] [--prd <file>]"
 agent: gsd-planner
 allowed-tools:
   - Read
@@ -36,6 +36,7 @@ Phase number: $ARGUMENTS (optional - auto-detects next unplanned phase if not pr
 - `--skip-research` — Skip research entirely, go straight to planning
 - `--gaps` — Gap closure mode (reads VERIFICATION.md, skips research)
 - `--skip-verify` — Skip planner → checker verification loop
+- `--prd <file>` — Parse a PRD/acceptance-criteria file into planning context and skip discuss-phase capture
 
 Normalize phase input in step 2 before any directory lookups.
 </context>

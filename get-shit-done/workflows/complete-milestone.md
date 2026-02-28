@@ -63,6 +63,12 @@ ls .planning/phases/*/SUMMARY.md 2>/dev/null | wc -l
 - Has the work been tested/validated?
 - Is this ready to ship/tag?
 
+**Requirements completion check (REQUIRED before presenting):**
+
+Parse `REQUIREMENTS.md` traceability table:
+- Count total v1 requirements vs checked-off (`[x]`) requirements
+- Identify any non-Complete rows
+
 Present:
 
 ```
@@ -76,6 +82,21 @@ Appears to include:
 
 Total: 4 phases, 8 plans, all complete
 ```
+
+If requirements are incomplete (`checked < total`), present:
+
+```
+⚠ Unchecked Requirements:
+- [ ] {REQ-ID}: {description} (Phase {X})
+...
+```
+
+Then ask user to choose:
+1. Proceed anyway (complete milestone with known gaps)
+2. Run audit first (`/gsd:audit-milestone`)
+3. Abort milestone completion
+
+If user proceeds with incomplete requirements, record them in `MILESTONES.md` under `### Known Gaps` with requirement IDs and descriptions.
 
 <config-check>
 
@@ -154,12 +175,13 @@ Milestone Stats:
 
 <step name="extract_accomplishments">
 
-Read all phase SUMMARY.md files in milestone range:
+Extract one-liners from SUMMARY.md files using summary-extract:
 
 ```bash
-cat .planning/phases/01-*/01-*-SUMMARY.md
-cat .planning/phases/02-*/02-*-SUMMARY.md
-# ... for each phase in milestone
+# For each phase in milestone, extract one-liner
+for summary in .planning/phases/*-*/*-SUMMARY.md; do
+  node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" summary-extract "$summary" --fields one_liner | jq -r '.one_liner'
+done
 ```
 
 From summaries, extract 4-6 key accomplishments.
@@ -460,7 +482,31 @@ Extract completed milestone details and create archive file.
    ✅ ROADMAP.md deleted (fresh one for next milestone)
    ```
 
-**Note:** Phase directories (`.planning/phases/`) are NOT deleted. They accumulate across milestones as the raw execution history. Phase numbering continues (v1.0 phases 1-4, v1.1 phases 5-8, etc.).
+**Phase archival (optional):** Ask whether to archive completed phase directories for this milestone.
+
+Use AskUserQuestion:
+- header: "Archive Phases"
+- question: "Archive phase directories to milestones/v[X.Y]-phases/?"
+- options:
+  - "Yes — archive now"
+  - "Skip — keep in .planning/phases/"
+
+**If "Yes — archive now":**
+
+```bash
+mkdir -p .planning/milestones/v[X.Y]-phases
+for d in .planning/phases/*; do
+  [ -d "$d" ] && mv "$d" .planning/milestones/v[X.Y]-phases/
+done
+```
+
+Confirm:
+```
+✅ Phase directories archived to .planning/milestones/v[X.Y]-phases/
+```
+
+**If "Skip — keep in .planning/phases/":**
+Phase directories remain as raw execution history. Use `/gsd:cleanup` later to archive retroactively.
 
 </step>
 
@@ -588,6 +634,8 @@ Check if branching was used and offer merge options.
 ```bash
 # Get branching strategy from config
 BRANCHING_STRATEGY=$(cat .planning/config.json 2>/dev/null | grep -o '"branching_strategy"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*:.*"\([^"]*\)"/\1/' || echo "none")
+# Respect planning-doc commit policy during branch merges
+COMMIT_DOCS=$(cat .planning/config.json 2>/dev/null | grep -o '"commit_docs"[[:space:]]*:[[:space:]]*[^,}]*' | grep -o 'true\\|false' || echo "true")
 ```
 
 **If strategy is "none":** Skip to git_tag step.
@@ -675,6 +723,9 @@ if [ "$BRANCHING_STRATEGY" = "phase" ]; then
   for branch in $PHASE_BRANCHES; do
     echo "Squash merging $branch..."
     git merge --squash "$branch"
+    if [ "$COMMIT_DOCS" = "false" ]; then
+      git reset HEAD .planning/ 2>/dev/null || true
+    fi
     git commit -m "feat: $branch for v[X.Y]"
   done
 fi
@@ -683,6 +734,9 @@ fi
 if [ "$BRANCHING_STRATEGY" = "milestone" ]; then
   echo "Squash merging $MILESTONE_BRANCH..."
   git merge --squash "$MILESTONE_BRANCH"
+  if [ "$COMMIT_DOCS" = "false" ]; then
+    git reset HEAD .planning/ 2>/dev/null || true
+  fi
   git commit -m "feat: $MILESTONE_BRANCH for v[X.Y]"
 fi
 
@@ -701,14 +755,22 @@ git checkout main
 if [ "$BRANCHING_STRATEGY" = "phase" ]; then
   for branch in $PHASE_BRANCHES; do
     echo "Merging $branch..."
-    git merge --no-ff "$branch" -m "Merge branch '$branch' for v[X.Y]"
+    git merge --no-ff --no-commit "$branch"
+    if [ "$COMMIT_DOCS" = "false" ]; then
+      git reset HEAD .planning/ 2>/dev/null || true
+    fi
+    git commit -m "Merge branch '$branch' for v[X.Y]"
   done
 fi
 
 # For milestone strategy - merge milestone branch
 if [ "$BRANCHING_STRATEGY" = "milestone" ]; then
   echo "Merging $MILESTONE_BRANCH..."
-  git merge --no-ff "$MILESTONE_BRANCH" -m "Merge branch '$MILESTONE_BRANCH' for v[X.Y]"
+  git merge --no-ff --no-commit "$MILESTONE_BRANCH"
+  if [ "$COMMIT_DOCS" = "false" ]; then
+    git reset HEAD .planning/ 2>/dev/null || true
+  fi
+  git commit -m "Merge branch '$MILESTONE_BRANCH' for v[X.Y]"
 fi
 
 git checkout "$CURRENT_BRANCH"
@@ -740,11 +802,15 @@ Report: "Branches preserved for manual handling"
 
 <step name="git_tag">
 
+<config-check>
+Read `planning.git_tag` from `.planning/config.json` (default: `true` if not set).
+If `git_tag` is `false` → skip this step entirely, proceed to `git_commit_milestone`.
+</config-check>
+
 Create git tag for milestone:
 
 ```bash
-git tag -a v[X.Y] -m "$(cat <<'EOF'
-v[X.Y] [Name]
+git tag -a v[X.Y] -m "v[X.Y] [Name]
 
 Delivered: [One sentence]
 
@@ -753,9 +819,7 @@ Key accomplishments:
 - [Item 2]
 - [Item 3]
 
-See .planning/MILESTONES.md for full details.
-EOF
-)"
+See .planning/MILESTONES.md for full details."
 ```
 
 Confirm: "Tagged: v[X.Y]"
@@ -910,6 +974,9 @@ Milestone completion is successful when:
 - [ ] STATE.md updated with fresh project reference
 - [ ] Git tag created (v[X.Y])
 - [ ] Milestone commit made (includes archive files and deletion)
+- [ ] Requirements completion checked against REQUIREMENTS.md traceability table
+- [ ] Incomplete requirements surfaced with proceed/audit/abort options
+- [ ] Known gaps recorded in MILESTONES.md when user proceeds with incomplete requirements
 - [ ] User knows next step (/gsd:new-milestone)
 
 </success_criteria>

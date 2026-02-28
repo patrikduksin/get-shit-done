@@ -1,7 +1,7 @@
 ---
 name: gsd:discuss-phase
 description: Gather phase context through adaptive questioning before planning
-argument-hint: "<phase>"
+argument-hint: "<phase> [--auto]"
 allowed-tools:
   - Read
   - Write
@@ -9,6 +9,9 @@ allowed-tools:
   - Glob
   - Grep
   - AskUserQuestion
+  - Task
+  - mcp__context7__resolve-library-id
+  - mcp__context7__query-docs
 ---
 
 <objective>
@@ -28,7 +31,7 @@ Extract **Product Vision** decisions that downstream agents need — researcher 
 3. Deep-dive each selected area until satisfied
 4. Create CONTEXT.md with decisions that guide research and planning
 
-**Output:** `{phase}-CONTEXT.md` — product decisions clear enough that downstream agents can act without asking the user again
+**Output:** `{phase_num}-CONTEXT.md` — product decisions clear enough that downstream agents can act without asking the user again
 </objective>
 
 <execution_context>
@@ -39,21 +42,18 @@ Extract **Product Vision** decisions that downstream agents need — researcher 
 <context>
 Phase number: $ARGUMENTS (required)
 
-**Load project state:**
-@.planning/STATE.md
-
-**Load roadmap:**
-@.planning/ROADMAP.md
+Context files are resolved in-workflow using `init phase-op` and roadmap/state tool calls.
 </context>
 
 <process>
 1. Validate phase number (error if missing or not in roadmap)
 2. Check if CONTEXT.md exists (offer update/view/skip if yes)
-3. **Analyze phase** — Identify domain and generate phase-specific gray areas
-4. **Present gray areas** — Multi-select: which to discuss? (NO skip option)
-5. **Deep-dive each area** — 4 questions per area, then offer more/next
-6. **Write CONTEXT.md** — Sections match areas discussed
-7. Offer next steps (research or plan)
+3. **Scout codebase** — Find reusable assets, patterns, and integration points
+4. **Analyze phase** — Identify domain and generate code-informed gray areas
+5. **Present gray areas** — Multi-select: which to discuss? (NO skip option)
+6. **Deep-dive each area** — 4 questions per area, code-informed options, Context7 for library choices
+7. **Write CONTEXT.md** — Sections match areas discussed + code_context section
+8. Offer next steps (research or plan)
 
 **CRITICAL: Scope guardrail**
 - Phase boundary from ROADMAP.md is FIXED
