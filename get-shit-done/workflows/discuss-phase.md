@@ -1,5 +1,5 @@
 <purpose>
-Extract implementation decisions that downstream agents need. Analyze the phase to identify gray areas, let the user choose what to discuss, then deep-dive each selected area until satisfied.
+Extract product vision decisions that downstream agents need. Analyze the phase to identify gray areas, let the user choose what to discuss, then deep-dive each selected area until satisfied.
 
 You are a thinking partner, not an interviewer. The user is the visionary — you are the builder. Your job is to capture decisions that will guide research and planning, not to figure out implementation yourself.
 </purpose>
@@ -35,7 +35,7 @@ The user doesn't know (and shouldn't be asked):
 - Implementation approach (planner figures this out)
 - Success metrics (inferred from the work)
 
-Ask about vision and implementation choices. Capture decisions for downstream agents.
+Ask about vision and user-facing behavior choices. Capture decisions for downstream agents.
 </philosophy>
 
 <scope_guardrail>
@@ -103,6 +103,17 @@ Phase: "API documentation"
 - Architecture patterns
 - Performance optimization
 - Scope (roadmap defines this)
+
+**If user brings up technical implementation:**
+
+Politely redirect:
+```
+"Technical architecture decisions like [their topic] are handled in /gsd:plan-phase.
+We'll work through the trade-offs there.
+For now, let's focus on what this feature should do from a user perspective."
+```
+
+Capture technical preferences as notes under `## Technical Preferences (to consider in planning)`, but do not treat them as locked decisions.
 </gray_area_identification>
 
 <process>
@@ -165,73 +176,30 @@ If "Continue and replan after": Continue to analyze_phase.
 If "View existing plans": Display plan files, then offer "Continue" / "Cancel".
 If "Cancel": Exit workflow.
 
-**If `has_plans` is false:** Continue to scout_codebase.
-</step>
-
-<step name="scout_codebase">
-Lightweight scan of existing code to inform gray area identification and discussion. Uses ~10% context — acceptable for an interactive session.
-
-**Step 1: Check for existing codebase maps**
-```bash
-ls .planning/codebase/*.md 2>/dev/null
-```
-
-**If codebase maps exist:** Read the most relevant ones (CONVENTIONS.md, STRUCTURE.md, STACK.md based on phase type). Extract:
-- Reusable components/hooks/utilities
-- Established patterns (state management, styling, data fetching)
-- Integration points (where new code would connect)
-
-Skip to Step 3 below.
-
-**Step 2: If no codebase maps, do targeted grep**
-
-Extract key terms from the phase goal (e.g., "feed" → "post", "card", "list"; "auth" → "login", "session", "token").
-
-```bash
-# Find files related to phase goal terms
-grep -rl "{term1}\|{term2}" src/ app/ --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" 2>/dev/null | head -10
-
-# Find existing components/hooks
-ls src/components/ 2>/dev/null
-ls src/hooks/ 2>/dev/null
-ls src/lib/ src/utils/ 2>/dev/null
-```
-
-Read the 3-5 most relevant files to understand existing patterns.
-
-**Step 3: Build internal codebase_context**
-
-From the scan, identify:
-- **Reusable assets** — existing components, hooks, utilities that could be used in this phase
-- **Established patterns** — how the codebase does state management, styling, data fetching
-- **Integration points** — where new code would connect (routes, nav, providers)
-- **Creative options** — approaches the existing architecture enables or constrains
-
-Store as internal `<codebase_context>` for use in analyze_phase and present_gray_areas. This is NOT written to a file — it's used within this session only.
+**If `has_plans` is false:** Continue to analyze_phase.
 </step>
 
 <step name="analyze_phase">
-Analyze the phase to identify gray areas worth discussing. **Use codebase_context from scout step to ground the analysis.**
+Analyze the phase to identify gray areas worth discussing.
 
 **Read the phase description from ROADMAP.md and determine:**
 
 1. **Domain boundary** — What capability is this phase delivering? State it clearly.
 
-2. **Gray areas by category** — For each relevant category (UI, UX, Behavior, Empty States, Content), identify 1-2 specific ambiguities that would change implementation. **Annotate with code context where relevant** (e.g., "You already have a Card component" or "No existing pattern for this").
+2. **Gray areas by category** — For each relevant category (UI, UX, Behavior, Empty States, Content), identify 1-2 specific ambiguities that would change implementation.
 
 3. **Skip assessment** — If no meaningful gray areas exist (pure infrastructure, clear-cut implementation), the phase may not need discussion.
 
 **Output your analysis internally, then present to user.**
 
-Example analysis for "Post Feed" phase (with code context):
+Example analysis for "Post Feed" phase:
 ```
 Domain: Displaying posts from followed users
-Existing: Card component (src/components/ui/Card.tsx), useInfiniteQuery hook, Tailwind CSS
 Gray areas:
-- UI: Layout style (cards vs timeline vs grid) — Card component exists with shadow/rounded variants
-- UI: Information density (full posts vs previews) — no existing density patterns
-- Behavior: Loading pattern (infinite scroll vs pagination) — useInfiniteQuery already set up
-- Empty State: What shows when no posts exist — EmptyState component exists in ui/
+- UI: Layout style (cards vs timeline vs grid)
+- UI: Information density (full posts vs previews)
+- Behavior: Loading pattern (infinite scroll vs pagination)
+- Empty State: What shows when no posts exist
 - Content: What metadata displays (time, author, reactions count)
 ```
 </step>
@@ -253,23 +221,17 @@ We'll clarify HOW to implement this.
 - question: "Which areas do you want to discuss for [phase name]?"
 - options: Generate 3-4 phase-specific gray areas, each with:
   - "[Specific area]" (label) — concrete, not generic
-  - [1-2 questions this covers + code context annotation] (description)
+  - [1-2 questions this covers] (description)
   - **Highlight the recommended choice with brief explanation why**
-
-**Code context annotations:** When the scout found relevant existing code, annotate the gray area description:
-```
-☐ Layout style — Cards vs list vs timeline?
-  (You already have a Card component with shadow/rounded variants. Reusing it keeps the app consistent.)
-```
 
 **Do NOT include a "skip" or "you decide" option.** User ran this command to discuss — give them real choices.
 
-**Examples by domain (with code context):**
+**Examples by domain:**
 
 For "Post Feed" (visual feature):
 ```
-☐ Layout style — Cards vs list vs timeline? (Card component exists with variants)
-☐ Loading behavior — Infinite scroll or pagination? (useInfiniteQuery hook available)
+☐ Layout style — Cards vs list vs timeline? Information density?
+☐ Loading behavior — Infinite scroll or pagination? Pull to refresh?
 ☐ Content ordering — Chronological, algorithmic, or user choice?
 ☐ Post metadata — What info per post? Timestamps, reactions, author?
 ```
@@ -311,15 +273,7 @@ Ask 4 questions per area before offering to continue or move on. Each answer oft
    - header: "[Area]" (max 12 chars — abbreviate if needed)
    - question: Specific decision for this area
    - options: 2-3 concrete choices (AskUserQuestion adds "Other" automatically), with the recommended choice highlighted and brief explanation why
-   - **Annotate options with code context** when relevant:
-     ```
-     "How should posts be displayed?"
-     - Cards (reuses existing Card component — consistent with Messages)
-     - List (simpler, would be a new pattern)
-     - Timeline (needs new Timeline component — none exists yet)
-     ```
    - Include "You decide" as an option when reasonable — captures Claude discretion
-   - **Context7 for library choices:** When a gray area involves library selection (e.g., "magic links" → query next-auth docs) or API approach decisions, use `mcp__context7__*` tools to fetch current documentation and inform the options. Don't use Context7 for every question — only when library-specific knowledge improves the options.
 
 3. **After 4 questions, check:**
    - header: "[Area]" (max 12 chars)
@@ -403,19 +357,15 @@ mkdir -p ".planning/phases/${padded_phase}-${phase_slug}"
 
 </decisions>
 
-<code_context>
-## Existing Code Insights
+<technical_preferences>
+## Technical Preferences (to consider in planning)
 
-### Reusable Assets
-- [Component/hook/utility]: [How it could be used in this phase]
+[Any technical preferences the user mentioned during vision discussion.
+Do not treat these as locked architecture decisions.]
 
-### Established Patterns
-- [Pattern]: [How it constrains/enables this phase]
+[If none: "None mentioned"]
 
-### Integration Points
-- [Where new code connects to existing system]
-
-</code_context>
+</technical_preferences>
 
 <specifics>
 ## Specific Ideas
@@ -602,13 +552,12 @@ Route to `confirm_creation` step (existing behavior — show manual next steps).
 
 <success_criteria>
 - Phase validated against roadmap
-- Codebase scouted for reusable assets, patterns, and integration points
-- Gray areas identified through intelligent analysis with code context annotations
+- Gray areas identified through intelligent analysis (not generic questions)
 - User selected which areas to discuss
-- Each selected area explored until user satisfied (with code-informed options)
+- Each selected area explored until user satisfied
 - Scope creep redirected to deferred ideas
 - CONTEXT.md captures actual decisions, not vague vision
-- CONTEXT.md includes code_context section with reusable assets and patterns
+- Technical architecture questions redirected to planning phase
 - Deferred ideas preserved for future phases
 - STATE.md updated with session info
 - User knows next steps

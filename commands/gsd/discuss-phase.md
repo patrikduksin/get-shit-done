@@ -10,12 +10,18 @@ allowed-tools:
   - Grep
   - AskUserQuestion
   - Task
-  - mcp__context7__resolve-library-id
-  - mcp__context7__query-docs
 ---
 
 <objective>
-Extract implementation decisions that downstream agents need — researcher and planner will use CONTEXT.md to know what to investigate and what choices are locked.
+Extract **Product Vision** decisions that downstream agents need — researcher and planner will use CONTEXT.md to know what to investigate and what choices are locked.
+
+**IMPORTANT SCOPE:** This command is for product vision only:
+- User experience (how it feels to use)
+- Features (what it does)
+- Behavior (how it responds)
+- UI/UX (layout, interactions, states)
+
+**NOT for technical architecture** — stacks, databases, schemas, algorithms, library choices. Technical decisions happen in `/gsd:plan-phase`, where the technical consultant handles trade-offs.
 
 **How it works:**
 1. Analyze the phase to identify gray areas (UI, UX, behavior, etc.)
@@ -40,12 +46,11 @@ Context files are resolved in-workflow using `init phase-op` and roadmap/state t
 <process>
 1. Validate phase number (error if missing or not in roadmap)
 2. Check if CONTEXT.md exists (offer update/view/skip if yes)
-3. **Scout codebase** — Find reusable assets, patterns, and integration points
-4. **Analyze phase** — Identify domain and generate code-informed gray areas
-5. **Present gray areas** — Multi-select: which to discuss? (NO skip option)
-6. **Deep-dive each area** — 4 questions per area, code-informed options, Context7 for library choices
-7. **Write CONTEXT.md** — Sections match areas discussed + code_context section
-8. Offer next steps (research or plan)
+3. **Analyze phase** — Identify domain and generate phase-specific gray areas
+4. **Present gray areas** — Multi-select: which to discuss? (NO skip option)
+5. **Deep-dive each area** — 4 questions per area, then offer more/next
+6. **Write CONTEXT.md** — Sections match areas discussed
+7. Offer next steps (research or plan)
 
 **CRITICAL: Scope guardrail**
 - Phase boundary from ROADMAP.md is FIXED
@@ -74,6 +79,14 @@ Generate 3-4 **phase-specific** gray areas, not generic categories.
 - Architecture choices
 - Performance concerns
 - Scope expansion
+
+**If user brings up technical implementation:**
+
+When the user tries to discuss technical details (for example, "Use Postgres", "Use Redis for caching", "Should we use GraphQL?"), politely redirect:
+
+> "Technical architecture decisions like [their topic] are handled in `/gsd:plan-phase`. The technical consultant there will analyze trade-offs and work with you on the right approach. For now, let's focus on what you want the feature to do from a user perspective."
+
+Capture technical preferences as notes in CONTEXT.md under `## Technical Preferences (to consider in planning)` but do not treat them as locked decisions.
 </process>
 
 <success_criteria>
